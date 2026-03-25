@@ -5,7 +5,12 @@ import {
 } from '@/lib/background/history-handler';
 import * as db from '@/lib/db/client';
 import { startSyncLoop } from '@/lib/sync/sync-engine';
-import { getSyncStatus } from '@/lib/sync/pairing';
+import {
+  getSyncStatus,
+  createSyncGroup,
+  joinSyncGroup,
+  leaveSyncGroup,
+} from '@/lib/sync/pairing';
 
 export default defineBackground(() => {
   // Ensure device_id is generated on first startup.
@@ -94,6 +99,37 @@ export default defineBackground(() => {
             sendResponse({ ok: false, error: String(err) });
           });
         return true; // async response
+      }
+
+      case 'create-sync-group': {
+        createSyncGroup()
+          .then((result) => sendResponse({ ok: true, data: result }))
+          .catch((err) => {
+            console.error('[background] create-sync-group error:', err);
+            sendResponse({ ok: false, error: String(err) });
+          });
+        return true;
+      }
+
+      case 'join-sync-group': {
+        const { code } = (data ?? {}) as { code: string };
+        joinSyncGroup(code)
+          .then((result) => sendResponse({ ok: true, data: result }))
+          .catch((err) => {
+            console.error('[background] join-sync-group error:', err);
+            sendResponse({ ok: false, error: String(err) });
+          });
+        return true;
+      }
+
+      case 'leave-sync-group': {
+        leaveSyncGroup()
+          .then(() => sendResponse({ ok: true }))
+          .catch((err) => {
+            console.error('[background] leave-sync-group error:', err);
+            sendResponse({ ok: false, error: String(err) });
+          });
+        return true;
       }
 
       default:

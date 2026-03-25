@@ -1,5 +1,8 @@
 import { useState } from 'react';
 import { HistoryList } from './components/HistoryList';
+import { TabNav } from './components/TabNav';
+import { DevicePairing } from './components/DevicePairing';
+import { SyncStatus } from './components/SyncStatus';
 import './App.css';
 
 type Tab = 'history' | 'devices' | 'settings';
@@ -13,43 +16,19 @@ function App() {
         <h1 className="popup__title">YouTube History</h1>
       </header>
 
-      <nav className="popup__tabs">
-        <button
-          className={`popup__tab ${activeTab === 'history' ? 'popup__tab--active' : ''}`}
-          onClick={() => setActiveTab('history')}
-          type="button"
-        >
-          History
-        </button>
-        <button
-          className={`popup__tab ${activeTab === 'devices' ? 'popup__tab--active' : ''}`}
-          onClick={() => setActiveTab('devices')}
-          type="button"
-        >
-          Devices
-        </button>
-        <button
-          className={`popup__tab ${activeTab === 'settings' ? 'popup__tab--active' : ''}`}
-          onClick={() => setActiveTab('settings')}
-          type="button"
-        >
-          Settings
-        </button>
-      </nav>
+      <TabNav activeTab={activeTab} onTabChange={setActiveTab} />
 
       <main className="popup__content">
         {activeTab === 'history' && <HistoryList />}
-        {activeTab === 'devices' && (
-          <div className="popup__placeholder">
-            <span>Devices — coming soon</span>
-          </div>
-        )}
+        {activeTab === 'devices' && <DevicePairing />}
         {activeTab === 'settings' && (
           <div className="popup__placeholder">
-            <span>Settings — coming soon</span>
+            <span>Settings coming soon</span>
           </div>
         )}
       </main>
+
+      <SyncStatus />
     </div>
   );
 }
