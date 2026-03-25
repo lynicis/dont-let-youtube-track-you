@@ -83,6 +83,11 @@ CREATE POLICY "Allow update for anon"
   USING (true)
   WITH CHECK (true);
 
+CREATE POLICY "Allow delete for anon"
+  ON devices FOR DELETE
+  TO anon
+  USING (true);
+
 -- browsing_history: insert and select for anon (group_id filtering done app-side)
 CREATE POLICY "Allow insert for anon"
   ON browsing_history FOR INSERT
