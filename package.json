@@ -15,12 +15,16 @@
     "postinstall": "wxt prepare"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.100.0",
     "react": "^19.2.4",
-    "react-dom": "^19.2.4"
+    "react-dom": "^19.2.4",
+    "uuid": "^13.0.0",
+    "wa-sqlite": "^1.0.0"
   },
   "devDependencies": {
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
+    "@types/uuid": "^11.0.0",
     "@wxt-dev/module-react": "^1.1.5",
     "typescript": "^5.9.3",
     "wxt": "^0.20.20"
