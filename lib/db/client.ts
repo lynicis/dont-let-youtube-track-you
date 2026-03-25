@@ -1,6 +1,9 @@
 /**
- * Background-facing DB client that communicates with the offscreen
- * document via chrome.runtime.sendMessage.
+ * Background-facing DB client.
+ *
+ * On Chrome: communicates with the offscreen document via chrome.runtime.sendMessage.
+ * On Firefox/Safari: spawns the Web Worker directly from the background script
+ * (Firefox MV3 supports Workers in background scripts; there is no offscreen API).
  *
  * Usage: import { db } from '@/lib/db/client' in the background script.
  */
@@ -17,19 +20,32 @@ import type {
 
 const OFFSCREEN_DOCUMENT_PATH = '/db-offscreen.html';
 
+// ---- Chrome offscreen approach ----
+
 let offscreenCreating: Promise<void> | null = null;
 
-/** Ensure the offscreen document exists (create it if needed). */
+/** Returns true if chrome.offscreen API is available (Chrome MV3 only). */
+function hasOffscreenAPI(): boolean {
+  const chromeGlobal = globalThis as unknown as {
+    chrome?: { offscreen?: unknown };
+  };
+  return !!chromeGlobal.chrome?.offscreen;
+}
+
+/** Ensure the offscreen document exists (Chrome only). */
 async function ensureOffscreenDocument(): Promise<void> {
-  // chrome.offscreen is only available in MV3 Chrome extensions
-  const chromeGlobal = globalThis as unknown as { chrome?: { offscreen?: {
-    hasDocument: () => Promise<boolean>;
-    createDocument: (params: {
-      url: string;
-      reasons: string[];
-      justification: string;
-    }) => Promise<void>;
-  } } };
+  const chromeGlobal = globalThis as unknown as {
+    chrome?: {
+      offscreen?: {
+        hasDocument: () => Promise<boolean>;
+        createDocument: (params: {
+          url: string;
+          reasons: string[];
+          justification: string;
+        }) => Promise<void>;
+      };
+    };
+  };
 
   const offscreen = chromeGlobal.chrome?.offscreen;
   if (!offscreen) {
@@ -54,8 +70,11 @@ async function ensureOffscreenDocument(): Promise<void> {
   offscreenCreating = null;
 }
 
-/** Send a DB request to the offscreen document and wait for the response. */
-async function sendDbRequest(operation: DbOperation, params: unknown): Promise<unknown> {
+/** Send a DB request via chrome.runtime.sendMessage to the offscreen document. */
+async function sendViaOffscreen(
+  operation: DbOperation,
+  params: unknown,
+): Promise<unknown> {
   await ensureOffscreenDocument();
 
   const request: DbRequest = {
@@ -65,17 +84,119 @@ async function sendDbRequest(operation: DbOperation, params: unknown): Promise<u
     params,
   };
 
-  const response = await browser.runtime.sendMessage(request) as DbResponse;
+  const response = (await browser.runtime.sendMessage(request)) as DbResponse;
 
   if (!response) {
     throw new Error(`No response for DB operation: ${operation}`);
   }
-
   if (!response.ok) {
     throw new Error(response.error);
   }
-
   return response.data;
+}
+
+// ---- Firefox/Safari direct-worker approach ----
+
+let directWorker: Worker | null = null;
+let directWorkerReady: Promise<void> | null = null;
+const pendingRequests = new Map<string, (response: DbResponse) => void>();
+
+/**
+ * Initialise a Web Worker directly (Firefox/Safari background scripts support
+ * Workers, so we don't need the offscreen document dance).
+ */
+function ensureDirectWorker(): Promise<void> {
+  if (directWorkerReady) return directWorkerReady;
+
+  directWorkerReady = new Promise<void>((resolve, reject) => {
+    try {
+      directWorker = new Worker(
+        new URL('./worker.ts', import.meta.url),
+        { type: 'module' },
+      );
+
+      directWorker.onmessage = (event: MessageEvent<DbResponse>) => {
+        const response = event.data;
+        if (response.type !== 'db-response') return;
+
+        // Init signal
+        if (response.requestId === '__init__') {
+          if (response.ok) {
+            console.log('[db-client] Direct worker initialized');
+            resolve();
+          } else {
+            reject(
+              new Error(
+                `Worker init failed: ${response.ok === false ? response.error : 'unknown'}`,
+              ),
+            );
+          }
+          return;
+        }
+
+        // Route to pending request
+        const resolver = pendingRequests.get(response.requestId);
+        if (resolver) {
+          pendingRequests.delete(response.requestId);
+          resolver(response);
+        }
+      };
+
+      directWorker.onerror = (event) => {
+        console.error('[db-client] Direct worker error:', event.message);
+      };
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      console.error('[db-client] Failed to create direct worker:', error);
+      reject(error);
+    }
+  });
+
+  return directWorkerReady;
+}
+
+/** Send a DB request directly to the worker via postMessage. */
+async function sendViaDirect(
+  operation: DbOperation,
+  params: unknown,
+): Promise<unknown> {
+  await ensureDirectWorker();
+
+  if (!directWorker) {
+    throw new Error('Direct worker not initialized');
+  }
+
+  const request: DbRequest = {
+    type: 'db-request',
+    requestId: uuidv4(),
+    operation,
+    params,
+  };
+
+  return new Promise<unknown>((resolve, reject) => {
+    pendingRequests.set(request.requestId, (response) => {
+      if (response.ok) {
+        resolve(response.data);
+      } else {
+        reject(new Error(response.ok === false ? response.error : 'Unknown error'));
+      }
+    });
+    directWorker!.postMessage(request);
+  });
+}
+
+// ---- Unified send ----
+
+/** Send a DB request using the best available transport. */
+async function sendDbRequest(
+  operation: DbOperation,
+  params: unknown,
+): Promise<unknown> {
+  if (hasOffscreenAPI()) {
+    return sendViaOffscreen(operation, params);
+  }
+  // Firefox/Safari: use direct worker from background script
+  return sendViaDirect(operation, params);
 }
 
 // ---- Public DB API ----

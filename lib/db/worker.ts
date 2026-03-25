@@ -1,8 +1,10 @@
 /**
- * Web Worker that runs wa-sqlite with OPFS-based VFS (Chrome)
- * or IndexedDB fallback (Firefox/Safari).
+ * Web Worker that runs wa-sqlite with runtime VFS selection:
+ *   - AccessHandlePoolVFS (OPFS) on Chrome/Edge
+ *   - IDBBatchAtomicVFS (IndexedDB) on Firefox/Safari
  *
- * Communication: offscreen document ↔ this worker via postMessage.
+ * Communication: offscreen document (Chrome) or direct postMessage
+ * from the background script (Firefox) ↔ this worker.
  */
 
 import SQLiteESMFactory from 'wa-sqlite/dist/wa-sqlite.mjs';
@@ -228,20 +230,29 @@ async function initDatabase(): Promise<void> {
   const module = await SQLiteESMFactory();
   sqlite3 = SQLite.Factory(module);
 
-  // Try OPFS-backed AccessHandlePoolVFS first (Chrome, sync, works in workers)
+  // Select the best available VFS at runtime:
+  // 1. Try OPFS AccessHandlePoolVFS (Chrome/Edge — fast, synchronous file access)
+  // 2. Fall back to IDBBatchAtomicVFS (Firefox/Safari — IndexedDB-based)
+  // 3. If both fail, fall through to the default in-memory VFS
+  let vfsName: string | undefined;
   try {
+    // Probe for OPFS support before committing to AccessHandlePoolVFS.
+    // Firefox exposes navigator.storage.getDirectory() but doesn't support
+    // createSyncAccessHandle() inside extension workers, so we verify that
+    // the VFS can actually initialise.
+    await navigator.storage.getDirectory();
     const { AccessHandlePoolVFS } = await import(
       /* @vite-ignore */
       'wa-sqlite/src/examples/AccessHandlePoolVFS.js'
     );
     const vfs = new AccessHandlePoolVFS('youtube-history-vfs');
-    await vfs.isReady;
+    await vfs.isReady;                       // throws if sync handles unavailable
     // Cast needed: VFS.Base uses a different pData shape than SQLiteVFS interface,
     // but the runtime handles both correctly.
     sqlite3.vfs_register(vfs as unknown as SQLiteVFS, true);
-    console.log('[db-worker] Using AccessHandlePoolVFS (OPFS)');
+    vfsName = 'AccessHandlePoolVFS (OPFS)';
   } catch {
-    // Fallback to IDBBatchAtomicVFS (Firefox/Safari)
+    // OPFS not available or not functional — use IndexedDB VFS
     try {
       const { IDBBatchAtomicVFS } = await import(
         /* @vite-ignore */
@@ -249,10 +260,14 @@ async function initDatabase(): Promise<void> {
       );
       const vfs = new IDBBatchAtomicVFS('youtube-history-idb');
       sqlite3.vfs_register(vfs as unknown as SQLiteVFS, true);
-      console.log('[db-worker] Using IDBBatchAtomicVFS (IndexedDB fallback)');
+      vfsName = 'IDBBatchAtomicVFS (IndexedDB)';
     } catch (e) {
       console.warn('[db-worker] No persistent VFS available, using default memory VFS', e);
     }
+  }
+
+  if (vfsName) {
+    console.log(`[db-worker] Using ${vfsName}`);
   }
 
   db = await sqlite3.open_v2(DB_NAME);
