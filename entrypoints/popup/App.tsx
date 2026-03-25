@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { HistoryList } from './components/HistoryList';
 import { TabNav } from './components/TabNav';
 import { DevicePairing } from './components/DevicePairing';
+import { Settings } from './components/Settings';
 import { SyncStatus } from './components/SyncStatus';
 import './App.css';
 
@@ -21,11 +22,7 @@ function App() {
       <main className="popup__content">
         {activeTab === 'history' && <HistoryList />}
         {activeTab === 'devices' && <DevicePairing />}
-        {activeTab === 'settings' && (
-          <div className="popup__placeholder">
-            <span>Settings coming soon</span>
-          </div>
-        )}
+        {activeTab === 'settings' && <Settings />}
       </main>
 
       <SyncStatus />

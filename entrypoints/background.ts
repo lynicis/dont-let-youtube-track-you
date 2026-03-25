@@ -11,6 +11,9 @@ import {
   joinSyncGroup,
   leaveSyncGroup,
 } from '@/lib/sync/pairing';
+import { exportAsJson, exportAsCsv } from '@/lib/export/export';
+import { importFromJson } from '@/lib/export/import';
+import { runAutoCleanup, getRetentionDays, setRetentionDays } from '@/lib/db/cleanup';
 
 export default defineBackground(() => {
   // Ensure device_id is generated on first startup.
@@ -20,6 +23,11 @@ export default defineBackground(() => {
 
   // Start the Supabase sync loop (push every 30s, pull every 60s).
   const _stopSync = startSyncLoop();
+
+  // Run auto-cleanup on startup based on configured retention period.
+  runAutoCleanup().catch((err) => {
+    console.error('[background] auto-cleanup error:', err);
+  });
 
   // ---- Message router ----
 
@@ -127,6 +135,70 @@ export default defineBackground(() => {
           .then(() => sendResponse({ ok: true }))
           .catch((err) => {
             console.error('[background] leave-sync-group error:', err);
+            sendResponse({ ok: false, error: String(err) });
+          });
+        return true;
+      }
+
+      // -- Export / Import / Cleanup messages --
+
+      case 'export-json': {
+        exportAsJson()
+          .then((json) => sendResponse({ ok: true, data: json }))
+          .catch((err) => {
+            console.error('[background] export-json error:', err);
+            sendResponse({ ok: false, error: String(err) });
+          });
+        return true;
+      }
+
+      case 'export-csv': {
+        exportAsCsv()
+          .then((csv) => sendResponse({ ok: true, data: csv }))
+          .catch((err) => {
+            console.error('[background] export-csv error:', err);
+            sendResponse({ ok: false, error: String(err) });
+          });
+        return true;
+      }
+
+      case 'import-json': {
+        const { json } = (data ?? {}) as { json: string };
+        importFromJson(json)
+          .then((result) => sendResponse({ ok: true, data: result }))
+          .catch((err) => {
+            console.error('[background] import-json error:', err);
+            sendResponse({ ok: false, error: String(err) });
+          });
+        return true;
+      }
+
+      case 'clear-history': {
+        db.deleteOldEntries(0)
+          .then(() => sendResponse({ ok: true }))
+          .catch((err) => {
+            console.error('[background] clear-history error:', err);
+            sendResponse({ ok: false, error: String(err) });
+          });
+        return true;
+      }
+
+      case 'get-retention': {
+        getRetentionDays()
+          .then((days) => sendResponse({ ok: true, data: days }))
+          .catch((err) => {
+            console.error('[background] get-retention error:', err);
+            sendResponse({ ok: false, error: String(err) });
+          });
+        return true;
+      }
+
+      case 'set-retention': {
+        const { days } = (data ?? {}) as { days: number };
+        setRetentionDays(days)
+          .then(() => sendResponse({ ok: true }))
+          .catch((err) => {
+            console.error('[background] set-retention error:', err);
             sendResponse({ ok: false, error: String(err) });
           });
         return true;
