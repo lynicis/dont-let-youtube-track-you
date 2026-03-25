@@ -1,34 +1,56 @@
 import { useState } from 'react';
-import reactLogo from '@/assets/react.svg';
-import wxtLogo from '/wxt.svg';
+import { HistoryList } from './components/HistoryList';
 import './App.css';
 
+type Tab = 'history' | 'devices' | 'settings';
+
 function App() {
-  const [count, setCount] = useState(0);
+  const [activeTab, setActiveTab] = useState<Tab>('history');
 
   return (
-    <>
-      <div>
-        <a href="https://wxt.dev" target="_blank">
-          <img src={wxtLogo} className="logo" alt="WXT logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>WXT + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
+    <div className="popup">
+      <header className="popup__header">
+        <h1 className="popup__title">YouTube History</h1>
+      </header>
+
+      <nav className="popup__tabs">
+        <button
+          className={`popup__tab ${activeTab === 'history' ? 'popup__tab--active' : ''}`}
+          onClick={() => setActiveTab('history')}
+          type="button"
+        >
+          History
         </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the WXT and React logos to learn more
-      </p>
-    </>
+        <button
+          className={`popup__tab ${activeTab === 'devices' ? 'popup__tab--active' : ''}`}
+          onClick={() => setActiveTab('devices')}
+          type="button"
+        >
+          Devices
+        </button>
+        <button
+          className={`popup__tab ${activeTab === 'settings' ? 'popup__tab--active' : ''}`}
+          onClick={() => setActiveTab('settings')}
+          type="button"
+        >
+          Settings
+        </button>
+      </nav>
+
+      <main className="popup__content">
+        {activeTab === 'history' && <HistoryList />}
+        {activeTab === 'devices' && (
+          <div className="popup__placeholder">
+            <span>Devices — coming soon</span>
+          </div>
+        )}
+        {activeTab === 'settings' && (
+          <div className="popup__placeholder">
+            <span>Settings — coming soon</span>
+          </div>
+        )}
+      </main>
+    </div>
   );
 }
 
