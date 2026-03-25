@@ -4,12 +4,17 @@ import {
   getOrCreateDeviceId,
 } from '@/lib/background/history-handler';
 import * as db from '@/lib/db/client';
+import { startSyncLoop } from '@/lib/sync/sync-engine';
+import { getSyncStatus } from '@/lib/sync/pairing';
 
 export default defineBackground(() => {
   // Ensure device_id is generated on first startup.
   getOrCreateDeviceId().catch((err) => {
     console.error('[background] failed to initialise device ID:', err);
   });
+
+  // Start the Supabase sync loop (push every 30s, pull every 60s).
+  const _stopSync = startSyncLoop();
 
   // ---- Message router ----
 
@@ -82,9 +87,13 @@ export default defineBackground(() => {
       }
 
       case 'get-sync-status': {
-        // Placeholder — sync not yet implemented.
-        sendResponse({ ok: true, data: null });
-        return false;
+        getSyncStatus()
+          .then((syncStatus) => sendResponse({ ok: true, data: syncStatus }))
+          .catch((err) => {
+            console.error('[background] get-sync-status error:', err);
+            sendResponse({ ok: false, error: String(err) });
+          });
+        return true; // async response
       }
 
       default:
