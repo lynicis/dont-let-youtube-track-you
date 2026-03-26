@@ -1,10 +1,11 @@
 /**
  * Background-facing DB client.
  *
- * On Chrome: communicates with the offscreen document via the Service Worker
- * clients API (postMessage). This avoids the broadcast problem with
- * chrome.runtime.sendMessage where other onMessage listeners intercept the
- * message before the offscreen document can respond.
+ * On Chrome: communicates with the offscreen document via chrome.runtime
+ * messaging (sendMessage / onMessage).  This is the standard MV3 pattern;
+ * the previous approach using the SW clients API + navigator.serviceWorker
+ * failed because offscreen documents are not reliably controlled by the
+ * extension's service worker.
  *
  * On Firefox/Safari: spawns the Web Worker directly from the background script
  * (Firefox MV3 supports Workers in background scripts; there is no offscreen API).
@@ -19,34 +20,43 @@ import type {
   BrowsingHistoryInput,
 } from './types';
 
-// ---- Service Worker global type helpers ----
-// These types exist at runtime in the SW context but aren't in the default
-// TypeScript lib.  We declare lightweight shims so the rest of the file
-// type-checks without pulling in the full WebWorker lib (which conflicts
-// with the DOM lib used elsewhere in the project).
+// ---- Chrome runtime type helpers ----
+// Lightweight shims for the chrome.runtime / chrome.offscreen APIs so that
+// this file type-checks without pulling in the full chrome-types package.
 
-declare const self: {
-  location: { origin: string };
-  clients: {
-    matchAll(opts?: {
-      type?: string;
-      includeUncontrolled?: boolean;
-    }): Promise<Array<{ url: string; postMessage(msg: unknown): void }>>;
+declare const chrome: {
+  offscreen?: {
+    hasDocument: () => Promise<boolean>;
+    createDocument: (params: {
+      url: string;
+      reasons: string[];
+      justification: string;
+    }) => Promise<void>;
   };
-  addEventListener(type: 'message', handler: (event: { data: unknown }) => void): void;
+  runtime: {
+    sendMessage(msg: unknown): Promise<unknown>;
+    onMessage: {
+      addListener(
+        cb: (
+          message: unknown,
+          sender: unknown,
+          sendResponse: (response?: unknown) => void,
+        ) => boolean | void,
+      ): void;
+    };
+  };
 };
-
-/** A matched SW client that we can postMessage to. */
-type SwClient = { url: string; postMessage(msg: unknown): void };
 
 const OFFSCREEN_DOCUMENT_PATH = '/db-offscreen.html';
 
 /** How long to wait for a single DB operation response (ms). */
 const REQUEST_TIMEOUT_MS = 15_000;
 
-/** How long to wait for the offscreen document to become a SW client (ms). */
-const CLIENT_DISCOVERY_TIMEOUT_MS = 5_000;
-const CLIENT_DISCOVERY_INTERVAL_MS = 200;
+/** Maximum number of retries for a failed DB operation. */
+const MAX_RETRIES = 2;
+
+/** Base delay between retries (ms); doubles each attempt. */
+const RETRY_BASE_DELAY_MS = 500;
 
 // ---- Shared pending-request map ----
 
@@ -55,34 +65,18 @@ const pendingRequests = new Map<
   { resolve: (data: unknown) => void; reject: (err: Error) => void }
 >();
 
-// ---- Chrome offscreen approach (via SW clients API) ----
+// ---- Chrome offscreen approach (via chrome.runtime messaging) ----
 
 let offscreenCreating: Promise<void> | null = null;
 
 /** Returns true if chrome.offscreen API is available (Chrome MV3 only). */
 function hasOffscreenAPI(): boolean {
-  const chromeGlobal = globalThis as unknown as {
-    chrome?: { offscreen?: unknown };
-  };
-  return !!chromeGlobal.chrome?.offscreen;
+  return typeof chrome !== 'undefined' && !!chrome.offscreen;
 }
 
 /** Ensure the offscreen document exists (Chrome only). */
 async function ensureOffscreenDocument(): Promise<void> {
-  const chromeGlobal = globalThis as unknown as {
-    chrome?: {
-      offscreen?: {
-        hasDocument: () => Promise<boolean>;
-        createDocument: (params: {
-          url: string;
-          reasons: string[];
-          justification: string;
-        }) => Promise<void>;
-      };
-    };
-  };
-
-  const offscreen = chromeGlobal.chrome?.offscreen;
+  const offscreen = chrome.offscreen;
   if (!offscreen) {
     throw new Error('chrome.offscreen API not available');
   }
@@ -105,70 +99,73 @@ async function ensureOffscreenDocument(): Promise<void> {
   offscreenCreating = null;
 }
 
-/**
- * Find the offscreen document among the Service Worker's controlled clients.
- * The offscreen doc's URL ends with OFFSCREEN_DOCUMENT_PATH.
- */
-async function findOffscreenClient(): Promise<SwClient | null> {
-  const allClients = await self.clients.matchAll({
-    type: 'window',
-    includeUncontrolled: true,
-  });
-  const offscreenUrl = new URL(OFFSCREEN_DOCUMENT_PATH, self.location.origin)
-    .href;
-  return allClients.find((c) => c.url === offscreenUrl) ?? null;
-}
-
-/**
- * Wait until the offscreen document shows up as a SW client.
- * createDocument() resolves before the document has fully loaded, so we poll.
- */
-async function waitForOffscreenClient(): Promise<SwClient> {
-  const deadline = Date.now() + CLIENT_DISCOVERY_TIMEOUT_MS;
-  while (Date.now() < deadline) {
-    const client = await findOffscreenClient();
-    if (client) return client;
-    await new Promise((r) => setTimeout(r, CLIENT_DISCOVERY_INTERVAL_MS));
-  }
-  throw new Error(
-    'Offscreen document did not appear as a SW client within timeout',
-  );
-}
-
 let offscreenListenerRegistered = false;
 
 /**
- * Register a one-time listener on the SW global scope for messages coming back
- * from the offscreen document via navigator.serviceWorker.controller.postMessage.
+ * Register a one-time listener on chrome.runtime.onMessage for DB responses
+ * coming back from the offscreen document.
  */
-function ensureSwMessageListener(): void {
+function ensureRuntimeMessageListener(): void {
   if (offscreenListenerRegistered) return;
   offscreenListenerRegistered = true;
 
-  self.addEventListener('message', (event: { data: unknown }) => {
-    const data = event.data as DbResponse | undefined;
-    if (!data || data.type !== 'db-response') return;
+  chrome.runtime.onMessage.addListener(
+    (message: unknown, _sender: unknown, _sendResponse: unknown) => {
+      const data = message as DbResponse | undefined;
+      if (!data || data.type !== 'db-response') return;
 
-    const pending = pendingRequests.get(data.requestId);
-    if (!pending) return;
-    pendingRequests.delete(data.requestId);
+      const pending = pendingRequests.get(data.requestId);
+      if (!pending) return;
+      pendingRequests.delete(data.requestId);
 
-    if (data.ok) {
-      pending.resolve(data.data);
-    } else {
-      pending.reject(new Error(data.error));
-    }
-  });
+      if (data.ok) {
+        pending.resolve(data.data);
+      } else {
+        pending.reject(new Error(data.error));
+      }
+    },
+  );
 }
 
-/** Send a DB request to the offscreen document via the SW clients API. */
-async function sendViaOffscreen(
+// ---- Readiness gate (Chrome offscreen) ----
+
+let offscreenReady: Promise<void> | null = null;
+
+/**
+ * Perform a lightweight DB round-trip (getConfig) to prove the full
+ * background → offscreen → worker → offscreen → background chain works.
+ *
+ * This is called once before the first real operation and cached.
+ * If the probe fails the promise rejects and will be retried next call.
+ */
+function ensureOffscreenReady(): Promise<void> {
+  if (offscreenReady) return offscreenReady;
+
+  offscreenReady = (async () => {
+    console.log('[db-client] Probing offscreen worker readiness…');
+    await sendViaOffscreenOnce('getConfig', { key: '__readiness_probe__' });
+    console.log('[db-client] Offscreen worker ready');
+  })();
+
+  // If the probe fails, clear so next call retries.
+  offscreenReady.catch(() => {
+    offscreenReady = null;
+  });
+
+  return offscreenReady;
+}
+
+/**
+ * Send a single DB request to the offscreen document (no retry).
+ * Uses chrome.runtime.sendMessage to deliver the request; the offscreen
+ * document responds via chrome.runtime.sendMessage back.
+ */
+async function sendViaOffscreenOnce(
   operation: DbOperation,
   params: unknown,
 ): Promise<unknown> {
-  ensureSwMessageListener();
+  ensureRuntimeMessageListener();
   await ensureOffscreenDocument();
-  const client = await waitForOffscreenClient();
 
   const request: DbRequest = {
     type: 'db-request',
@@ -180,6 +177,9 @@ async function sendViaOffscreen(
   return new Promise<unknown>((resolve, reject) => {
     const timer = setTimeout(() => {
       pendingRequests.delete(request.requestId);
+      console.error(
+        `[db-client] Timeout: ${operation} (${REQUEST_TIMEOUT_MS}ms) reqId=${request.requestId}`,
+      );
       reject(
         new Error(
           `DB operation timed out: ${operation} (${REQUEST_TIMEOUT_MS}ms)`,
@@ -198,8 +198,48 @@ async function sendViaOffscreen(
       },
     });
 
-    client.postMessage(request);
+    // Send the request to all extension contexts — the offscreen document's
+    // onMessage listener picks it up by checking type === 'db-request'.
+    chrome.runtime.sendMessage(request).catch((err: unknown) => {
+      // If sendMessage itself fails (e.g. no listeners), reject immediately
+      // rather than waiting for the timeout.
+      clearTimeout(timer);
+      pendingRequests.delete(request.requestId);
+      reject(
+        err instanceof Error
+          ? err
+          : new Error(`sendMessage failed: ${String(err)}`),
+      );
+    });
   });
+}
+
+/**
+ * Send a DB request to the offscreen document with readiness gate + retry.
+ */
+async function sendViaOffscreen(
+  operation: DbOperation,
+  params: unknown,
+): Promise<unknown> {
+  await ensureOffscreenReady();
+
+  let lastError: Error | undefined;
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      return await sendViaOffscreenOnce(operation, params);
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+      if (attempt < MAX_RETRIES) {
+        const delay = RETRY_BASE_DELAY_MS * 2 ** attempt;
+        console.warn(
+          `[db-client] ${operation} attempt ${attempt + 1} failed, retrying in ${delay}ms…`,
+          lastError.message,
+        );
+        await new Promise((r) => setTimeout(r, delay));
+      }
+    }
+  }
+  throw lastError;
 }
 
 // ---- Firefox/Safari direct-worker approach ----
@@ -267,8 +307,8 @@ function ensureDirectWorker(): Promise<void> {
   return directWorkerReady;
 }
 
-/** Send a DB request directly to the worker via postMessage. */
-async function sendViaDirect(
+/** Send a single DB request directly to the worker (no retry). */
+async function sendViaDirectOnce(
   operation: DbOperation,
   params: unknown,
 ): Promise<unknown> {
@@ -286,9 +326,57 @@ async function sendViaDirect(
   };
 
   return new Promise<unknown>((resolve, reject) => {
-    pendingRequests.set(request.requestId, { resolve, reject });
+    const timer = setTimeout(() => {
+      pendingRequests.delete(request.requestId);
+      console.error(
+        `[db-client] Timeout (direct): ${operation} (${REQUEST_TIMEOUT_MS}ms) reqId=${request.requestId}`,
+      );
+      reject(
+        new Error(
+          `DB operation timed out: ${operation} (${REQUEST_TIMEOUT_MS}ms)`,
+        ),
+      );
+    }, REQUEST_TIMEOUT_MS);
+
+    pendingRequests.set(request.requestId, {
+      resolve: (data) => {
+        clearTimeout(timer);
+        resolve(data);
+      },
+      reject: (err) => {
+        clearTimeout(timer);
+        reject(err);
+      },
+    });
+
     directWorker!.postMessage(request);
   });
+}
+
+/**
+ * Send a DB request directly to the worker with retry.
+ */
+async function sendViaDirect(
+  operation: DbOperation,
+  params: unknown,
+): Promise<unknown> {
+  let lastError: Error | undefined;
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      return await sendViaDirectOnce(operation, params);
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+      if (attempt < MAX_RETRIES) {
+        const delay = RETRY_BASE_DELAY_MS * 2 ** attempt;
+        console.warn(
+          `[db-client] ${operation} (direct) attempt ${attempt + 1} failed, retrying in ${delay}ms…`,
+          lastError.message,
+        );
+        await new Promise((r) => setTimeout(r, delay));
+      }
+    }
+  }
+  throw lastError;
 }
 
 // ---- Unified send ----
@@ -303,6 +391,23 @@ async function sendDbRequest(
   }
   // Firefox/Safari: use direct worker from background script
   return sendViaDirect(operation, params);
+}
+
+// ---- Readiness API ----
+
+/**
+ * Returns a promise that resolves once the DB worker is confirmed operational.
+ *
+ * Callers that need the DB to be ready before proceeding (e.g. the sync loop)
+ * should `await waitForReady()`.  The underlying probe is cached — subsequent
+ * calls resolve immediately once the worker has responded at least once.
+ */
+export async function waitForReady(): Promise<void> {
+  if (hasOffscreenAPI()) {
+    await ensureOffscreenReady();
+  } else {
+    await ensureDirectWorker();
+  }
 }
 
 // ---- Public DB API ----

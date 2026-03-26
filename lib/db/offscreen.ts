@@ -1,16 +1,29 @@
 /**
  * Offscreen document script that hosts the wa-sqlite Web Worker.
  *
- * Communication uses the Service Worker messaging API:
- *   - Receives requests via  navigator.serviceWorker  'message' events
- *     (sent by the background SW via client.postMessage).
- *   - Sends responses back via navigator.serviceWorker.controller.postMessage.
+ * Communication uses chrome.runtime messaging:
+ *   - Receives requests via chrome.runtime.onMessage (sent by the
+ *     background service worker via chrome.runtime.sendMessage).
+ *   - Sends responses back via chrome.runtime.sendMessage.
  *
- * This avoids chrome.runtime.sendMessage broadcast issues where the
- * background's own onMessage listener would intercept DB requests.
+ * This is the standard Chrome MV3 pattern for offscreen ↔ background
+ * communication.  The previous approach (navigator.serviceWorker.controller)
+ * failed because Chrome offscreen documents are not reliably controlled
+ * by the extension's service worker.
  */
 
 import type { DbRequest, DbResponse } from '@/lib/db/types';
+
+// Chrome runtime API is available in the offscreen document at runtime.
+// We declare a minimal shim to avoid pulling in the full chrome-types package.
+declare const chrome: {
+  runtime: {
+    sendMessage(msg: unknown): Promise<void>;
+    onMessage: {
+      addListener(cb: (msg: unknown) => void): void;
+    };
+  };
+};
 
 let worker: Worker | null = null;
 
@@ -81,27 +94,39 @@ async function handleDbRequest(request: DbRequest): Promise<DbResponse> {
 }
 
 /**
- * Send a response back to the background service worker via the
- * ServiceWorker controller postMessage channel.
+ * Send a response back to the background service worker via
+ * chrome.runtime.sendMessage.
  */
 function sendToServiceWorker(response: DbResponse): void {
-  const controller = navigator.serviceWorker?.controller;
-  if (controller) {
-    controller.postMessage(response);
-  } else {
-    console.error('[db-offscreen] No SW controller available to send response');
-  }
+  chrome.runtime.sendMessage(response).catch((err: unknown) => {
+    // This can happen if the SW is temporarily inactive; the timeout in
+    // client.ts will handle the retry.
+    console.warn(
+      `[db-offscreen] Failed to send response for reqId=${response.requestId}:`,
+      err,
+    );
+  });
 }
 
-// Listen for messages from the background service worker.
-// The SW sends messages via client.postMessage() (from clients.matchAll()),
-// which arrives as a 'message' event on navigator.serviceWorker.
-navigator.serviceWorker.addEventListener('message', (event) => {
-  const msg = event.data as DbRequest;
-  if (!msg || msg.type !== 'db-request') return;
+// Listen for messages from the background service worker via chrome.runtime.
+chrome.runtime.onMessage.addListener((msg: unknown) => {
+  const request = msg as DbRequest | undefined;
+  if (!request || request.type !== 'db-request') return;
 
-  handleDbRequest(msg).then((response) => {
+  handleDbRequest(request).then((response) => {
     sendToServiceWorker(response);
+  }).catch((err) => {
+    console.error(
+      `[db-offscreen] Unhandled error for ${request.operation} reqId=${request.requestId}:`,
+      err,
+    );
+    // Still try to send an error response so the background timeout doesn't fire.
+    sendToServiceWorker({
+      type: 'db-response',
+      requestId: request.requestId,
+      ok: false,
+      error: err instanceof Error ? err.message : String(err),
+    });
   });
 });
 

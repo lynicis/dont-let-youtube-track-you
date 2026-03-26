@@ -18,6 +18,10 @@ export default defineConfig({
       ...(browser === 'firefox' ? [] : ['offscreen']),
     ],
     host_permissions: ['https://*.supabase.co/*'],
+    content_security_policy: {
+      extension_pages:
+        "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'",
+    },
     // Firefox MV3 requires background.scripts (not service_worker).
     // WXT handles this automatically based on target browser.
     // browser_specific_settings is only relevant for Firefox (Gecko)

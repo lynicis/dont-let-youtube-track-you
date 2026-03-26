@@ -242,7 +242,6 @@ async function initDatabase(): Promise<void> {
     // the VFS can actually initialise.
     await navigator.storage.getDirectory();
     const { AccessHandlePoolVFS } = await import(
-      /* @vite-ignore */
       'wa-sqlite/src/examples/AccessHandlePoolVFS.js'
     );
     const vfs = new AccessHandlePoolVFS('youtube-history-vfs');
@@ -255,7 +254,6 @@ async function initDatabase(): Promise<void> {
     // OPFS not available or not functional — use IndexedDB VFS
     try {
       const { IDBBatchAtomicVFS } = await import(
-        /* @vite-ignore */
         'wa-sqlite/src/examples/IDBBatchAtomicVFS.js'
       );
       const vfs = new IDBBatchAtomicVFS('youtube-history-idb');

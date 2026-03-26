@@ -4,7 +4,7 @@ import {
   getOrCreateDeviceId,
 } from '@/lib/background/history-handler';
 import * as db from '@/lib/db/client';
-import { startSyncLoop } from '@/lib/sync/sync-engine';
+import { startSyncLoop, pullFromSupabase, pushToSupabase } from '@/lib/sync/sync-engine';
 import {
   getSyncStatus,
   createSyncGroup,
@@ -16,18 +16,29 @@ import { importFromJson } from '@/lib/export/import';
 import { runAutoCleanup, getRetentionDays, setRetentionDays } from '@/lib/db/cleanup';
 
 export default defineBackground(() => {
-  // Ensure device_id is generated on first startup.
-  getOrCreateDeviceId().catch((err) => {
-    console.error('[background] failed to initialise device ID:', err);
-  });
+  // Wait for the DB worker to be operational before running anything that
+  // depends on it.  This prevents the race where startSyncLoop / getOrCreateDeviceId
+  // fire requests before the offscreen→worker chain is ready, causing timeouts.
+  db.waitForReady()
+    .then(() => {
+      console.log('[background] DB ready — starting background tasks');
 
-  // Start the Supabase sync loop (push every 30s, pull every 60s).
-  const _stopSync = startSyncLoop();
+      // Ensure device_id is generated on first startup.
+      getOrCreateDeviceId().catch((err) => {
+        console.error('[background] failed to initialise device ID:', err);
+      });
 
-  // Run auto-cleanup on startup based on configured retention period.
-  runAutoCleanup().catch((err) => {
-    console.error('[background] auto-cleanup error:', err);
-  });
+      // Start the Supabase sync loop (push every 30s, pull every 60s).
+      startSyncLoop();
+
+      // Run auto-cleanup on startup based on configured retention period.
+      runAutoCleanup().catch((err) => {
+        console.error('[background] auto-cleanup error:', err);
+      });
+    })
+    .catch((err) => {
+      console.error('[background] DB failed to become ready:', err);
+    });
 
   // ---- Message router ----
 
@@ -111,7 +122,13 @@ export default defineBackground(() => {
 
       case 'create-sync-group': {
         createSyncGroup()
-          .then((result) => sendResponse({ ok: true, data: result }))
+          .then((result) => {
+            sendResponse({ ok: true, data: result });
+            // Immediately push local history after creating the group.
+            pushToSupabase().catch((err) => {
+              console.error('[background] post-create push error:', err);
+            });
+          })
           .catch((err) => {
             console.error('[background] create-sync-group error:', err);
             sendResponse({ ok: false, error: String(err) });
@@ -122,7 +139,13 @@ export default defineBackground(() => {
       case 'join-sync-group': {
         const { code } = (data ?? {}) as { code: string };
         joinSyncGroup(code)
-          .then((result) => sendResponse({ ok: true, data: result }))
+          .then((result) => {
+            sendResponse({ ok: true, data: result });
+            // Immediately pull history from the group after joining.
+            pullFromSupabase().catch((err) => {
+              console.error('[background] post-join pull error:', err);
+            });
+          })
           .catch((err) => {
             console.error('[background] join-sync-group error:', err);
             sendResponse({ ok: false, error: String(err) });
