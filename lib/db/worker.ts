@@ -229,17 +229,22 @@ self.onmessage = async (event: MessageEvent<DbRequest>) => {
 /**
  * Attempt to open the database and run schema migrations with the
  * currently registered VFS.  Returns true on success, false on failure.
+ * Uses a local handle to avoid corrupting the module-level `db` on failure.
  */
-async function tryOpenAndMigrate(): Promise<boolean> {
+async function tryOpenAndMigrate(vfsLabel: string): Promise<boolean> {
+  let handle: number | undefined;
   try {
-    db = await sqlite3.open_v2(DB_NAME);
+    handle = await sqlite3.open_v2(DB_NAME);
     for (const sql of SCHEMA_STATEMENTS) {
-      await sqlite3.exec(db, sql);
+      await sqlite3.exec(handle, sql);
     }
+    db = handle; // commit to module-level db only on success
     return true;
   } catch (err) {
-    console.warn('[db-worker] open/migrate failed with current VFS:', err);
-    try { sqlite3.close(db); } catch { /* ignore */ }
+    console.warn(`[db-worker] open/migrate failed with ${vfsLabel}:`, err);
+    if (handle !== undefined) {
+      try { sqlite3.close(handle); } catch { /* ignore */ }
+    }
     return false;
   }
 }
@@ -261,7 +266,7 @@ async function initDatabase(): Promise<void> {
     const vfs = new AccessHandlePoolVFS('youtube-history-vfs');
     await vfs.isReady;
     sqlite3.vfs_register(vfs as unknown as SQLiteVFS, true);
-    if (await tryOpenAndMigrate()) {
+    if (await tryOpenAndMigrate('AccessHandlePoolVFS')) {
       console.log('[db-worker] Using AccessHandlePoolVFS (OPFS)');
       return signalReady();
     }
@@ -276,7 +281,7 @@ async function initDatabase(): Promise<void> {
     );
     const vfs = new IDBBatchAtomicVFS('youtube-history-idb');
     sqlite3.vfs_register(vfs as unknown as SQLiteVFS, true);
-    if (await tryOpenAndMigrate()) {
+    if (await tryOpenAndMigrate('IDBBatchAtomicVFS')) {
       console.log('[db-worker] Using IDBBatchAtomicVFS (IndexedDB)');
       return signalReady();
     }
@@ -291,7 +296,7 @@ async function initDatabase(): Promise<void> {
     );
     const vfs = new IDBMinimalVFS('youtube-history-idb-min');
     sqlite3.vfs_register(vfs as unknown as SQLiteVFS, true);
-    if (await tryOpenAndMigrate()) {
+    if (await tryOpenAndMigrate('IDBMinimalVFS')) {
       console.log('[db-worker] Using IDBMinimalVFS (IndexedDB)');
       return signalReady();
     }
