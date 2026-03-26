@@ -226,58 +226,90 @@ self.onmessage = async (event: MessageEvent<DbRequest>) => {
 
 // ---- Initialization ----
 
+/**
+ * Attempt to open the database and run schema migrations with the
+ * currently registered VFS.  Returns true on success, false on failure.
+ */
+async function tryOpenAndMigrate(): Promise<boolean> {
+  try {
+    db = await sqlite3.open_v2(DB_NAME);
+    for (const sql of SCHEMA_STATEMENTS) {
+      await sqlite3.exec(db, sql);
+    }
+    return true;
+  } catch (err) {
+    console.warn('[db-worker] open/migrate failed with current VFS:', err);
+    try { sqlite3.close(db); } catch { /* ignore */ }
+    return false;
+  }
+}
+
 async function initDatabase(): Promise<void> {
   const module = await SQLiteESMFactory();
   sqlite3 = SQLite.Factory(module);
 
-  // Select the best available VFS at runtime:
-  // 1. Try OPFS AccessHandlePoolVFS (Chrome/Edge — fast, synchronous file access)
-  // 2. Fall back to IDBBatchAtomicVFS (Firefox/Safari — IndexedDB-based)
-  // 3. If both fail, fall through to the default in-memory VFS
-  let vfsName: string | undefined;
+  // Try VFS options in priority order.  Each attempt registers the VFS,
+  // opens the database, and runs schema migrations.  If any step fails
+  // the next VFS is tried.  If all fail, the default in-memory VFS is used.
+
+  // 1. OPFS AccessHandlePoolVFS (Chrome/Edge — fast, synchronous file access)
   try {
-    // Probe for OPFS support before committing to AccessHandlePoolVFS.
-    // Firefox exposes navigator.storage.getDirectory() but doesn't support
-    // createSyncAccessHandle() inside extension workers, so we verify that
-    // the VFS can actually initialise.
     await navigator.storage.getDirectory();
     const { AccessHandlePoolVFS } = await import(
       'wa-sqlite/src/examples/AccessHandlePoolVFS.js'
     );
     const vfs = new AccessHandlePoolVFS('youtube-history-vfs');
-    await vfs.isReady;                       // throws if sync handles unavailable
-    // Cast needed: VFS.Base uses a different pData shape than SQLiteVFS interface,
-    // but the runtime handles both correctly.
+    await vfs.isReady;
     sqlite3.vfs_register(vfs as unknown as SQLiteVFS, true);
-    vfsName = 'AccessHandlePoolVFS (OPFS)';
-  } catch {
-    // OPFS not available or not functional — use IndexedDB VFS
-    try {
-      const { IDBBatchAtomicVFS } = await import(
-        'wa-sqlite/src/examples/IDBBatchAtomicVFS.js'
-      );
-      const vfs = new IDBBatchAtomicVFS('youtube-history-idb');
-      sqlite3.vfs_register(vfs as unknown as SQLiteVFS, true);
-      vfsName = 'IDBBatchAtomicVFS (IndexedDB)';
-    } catch (e) {
-      console.warn('[db-worker] No persistent VFS available, using default memory VFS', e);
+    if (await tryOpenAndMigrate()) {
+      console.log('[db-worker] Using AccessHandlePoolVFS (OPFS)');
+      return signalReady();
     }
+  } catch {
+    // OPFS not available — continue to next option
   }
 
-  if (vfsName) {
-    console.log(`[db-worker] Using ${vfsName}`);
+  // 2. IDBBatchAtomicVFS (IndexedDB — batch atomic writes)
+  try {
+    const { IDBBatchAtomicVFS } = await import(
+      'wa-sqlite/src/examples/IDBBatchAtomicVFS.js'
+    );
+    const vfs = new IDBBatchAtomicVFS('youtube-history-idb');
+    sqlite3.vfs_register(vfs as unknown as SQLiteVFS, true);
+    if (await tryOpenAndMigrate()) {
+      console.log('[db-worker] Using IDBBatchAtomicVFS (IndexedDB)');
+      return signalReady();
+    }
+  } catch (e) {
+    console.warn('[db-worker] IDBBatchAtomicVFS failed:', e);
   }
 
+  // 3. IDBMinimalVFS (IndexedDB — simpler, avoids block0 null bug in wa-sqlite <=1.0)
+  try {
+    const { IDBMinimalVFS } = await import(
+      'wa-sqlite/src/examples/IDBMinimalVFS.js'
+    );
+    const vfs = new IDBMinimalVFS('youtube-history-idb-min');
+    sqlite3.vfs_register(vfs as unknown as SQLiteVFS, true);
+    if (await tryOpenAndMigrate()) {
+      console.log('[db-worker] Using IDBMinimalVFS (IndexedDB)');
+      return signalReady();
+    }
+  } catch (e) {
+    console.warn('[db-worker] IDBMinimalVFS failed:', e);
+  }
+
+  // 4. Default in-memory VFS (no persistence)
+  console.warn('[db-worker] No persistent VFS available, using default memory VFS');
   db = await sqlite3.open_v2(DB_NAME);
-
-  // Run schema migrations
   for (const sql of SCHEMA_STATEMENTS) {
     await sqlite3.exec(db, sql);
   }
+  signalReady();
+}
 
+function signalReady(): void {
   console.log('[db-worker] Database initialized');
-
-  // Signal readiness
   self.postMessage({ type: 'db-response', requestId: '__init__', ok: true, data: null } satisfies DbResponse);
 }
 

@@ -27,3 +27,14 @@ declare module 'wa-sqlite/src/examples/IDBBatchAtomicVFS.js' {
     close(): Promise<void>;
   }
 }
+
+declare module 'wa-sqlite/src/examples/IDBMinimalVFS.js' {
+  import * as VFS from 'wa-sqlite/src/VFS.js';
+  export class IDBMinimalVFS extends VFS.Base {
+    constructor(idbDatabaseName?: string, options?: {
+      durability?: 'default' | 'strict' | 'relaxed';
+    });
+    name: string;
+    close(): Promise<void>;
+  }
+}
