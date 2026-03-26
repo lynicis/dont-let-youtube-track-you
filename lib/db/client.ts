@@ -65,6 +65,18 @@ const pendingRequests = new Map<
   { resolve: (data: unknown) => void; reject: (err: Error) => void }
 >();
 
+// ---- Persistence mode tracking ----
+
+export type PersistenceMode = 'opfs' | 'indexeddb' | 'memory' | 'unknown';
+
+/** The storage backend the worker is using.  Set during initialization. */
+let currentPersistenceMode: PersistenceMode = 'unknown';
+
+/** Returns the storage persistence mode the DB worker is using. */
+export function getPersistenceMode(): PersistenceMode {
+  return currentPersistenceMode;
+}
+
 // ---- Chrome offscreen approach (via chrome.runtime messaging) ----
 
 let offscreenCreating: Promise<void> | null = null;
@@ -144,7 +156,10 @@ function ensureOffscreenReady(): Promise<void> {
   offscreenReady = (async () => {
     console.log('[db-client] Probing offscreen worker readiness…');
     await sendViaOffscreenOnce('getConfig', { key: '__readiness_probe__' });
-    console.log('[db-client] Offscreen worker ready');
+    // Fetch and cache persistence mode from the worker
+    const mode = (await sendViaOffscreenOnce('getPersistenceMode', {})) as PersistenceMode;
+    if (mode) currentPersistenceMode = mode;
+    console.log(`[db-client] Offscreen worker ready (persistence: ${currentPersistenceMode})`);
   })();
 
   // If the probe fails, clear so next call retries.
@@ -268,7 +283,12 @@ function ensureDirectWorker(): Promise<void> {
         // Init signal
         if (response.requestId === '__init__') {
           if (response.ok) {
-            console.log('[db-client] Direct worker initialized');
+            // Capture persistence mode from worker init data
+            const initData = response.data as { persistenceMode?: PersistenceMode } | null;
+            if (initData?.persistenceMode) {
+              currentPersistenceMode = initData.persistenceMode;
+            }
+            console.log(`[db-client] Direct worker initialized (persistence: ${currentPersistenceMode})`);
             resolve();
           } else {
             reject(
@@ -473,4 +493,14 @@ export async function getHistoryCount(): Promise<number> {
 /** Search history by title or URL. */
 export async function searchHistory(query: string): Promise<BrowsingHistoryEntry[]> {
   return (await sendDbRequest('searchHistory', { query })) as BrowsingHistoryEntry[];
+}
+
+/**
+ * Fetch the storage persistence mode from the worker.
+ * Returns 'opfs', 'indexeddb', 'memory', or 'unknown'.
+ */
+export async function fetchPersistenceMode(): Promise<PersistenceMode> {
+  const mode = (await sendDbRequest('getPersistenceMode', {})) as PersistenceMode;
+  currentPersistenceMode = mode;
+  return mode;
 }

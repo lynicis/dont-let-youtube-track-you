@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { HistoryList } from './components/HistoryList';
 import { TabNav } from './components/TabNav';
 import { DevicePairing } from './components/DevicePairing';
@@ -10,9 +10,28 @@ type Tab = 'history' | 'devices' | 'settings';
 
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>('history');
+  const [memoryMode, setMemoryMode] = useState(false);
+
+  useEffect(() => {
+    browser.runtime
+      .sendMessage({ type: 'get-persistence-mode' })
+      .then((res) => {
+        if (res?.ok && res.data === 'memory') {
+          setMemoryMode(true);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   return (
     <div className="popup">
+      {memoryMode && (
+        <div className="popup__warning">
+          Storage unavailable — history will not persist across restarts.
+          Private browsing mode or restrictive browser settings may be blocking database access.
+        </div>
+      )}
+
       <header className="popup__header">
         <h1 className="popup__title">YouTube History</h1>
       </header>

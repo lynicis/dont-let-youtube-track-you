@@ -227,6 +227,12 @@ export default defineBackground(() => {
         return true;
       }
 
+      case 'get-persistence-mode': {
+        const mode = db.getPersistenceMode();
+        sendResponse({ ok: true, data: mode });
+        return; // synchronous response
+      }
+
       default:
         // Unknown type — let other listeners handle it (e.g. db-request
         // messages handled by the offscreen document).

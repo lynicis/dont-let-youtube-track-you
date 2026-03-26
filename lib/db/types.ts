@@ -40,7 +40,8 @@ export type DbOperation =
   | 'deleteOldEntries'
   | 'getAllHistory'
   | 'getHistoryCount'
-  | 'searchHistory';
+  | 'searchHistory'
+  | 'getPersistenceMode';
 
 /** A request message sent to the DB worker/offscreen document. */
 export interface DbRequest {
