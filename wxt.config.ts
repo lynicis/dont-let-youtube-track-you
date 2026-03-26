@@ -17,5 +17,16 @@ export default defineConfig({
     host_permissions: ['https://*.supabase.co/*'],
     // Firefox MV3 requires background.scripts (not service_worker).
     // WXT handles this automatically based on target browser.
+    // browser_specific_settings is only relevant for Firefox (Gecko)
+    ...(browser === 'firefox'
+      ? {
+          browser_specific_settings: {
+            gecko: {
+              id: 'lynicis@protonmail.com',
+              strict_min_version: '109.0',
+            },
+          },
+        }
+      : {}),
   }),
 });
