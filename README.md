@@ -140,17 +140,49 @@ Local history tracking works without Supabase. If you want cross-device sync:
 
 1. Create a free project at [supabase.com](https://supabase.com).
 
-2. Run the migration in `supabase/migrations/001_initial_schema.sql` via the Supabase SQL editor.
-
-3. Open `lib/sync/supabase-client.ts` and replace the placeholders:
-   ```typescript
-   const SUPABASE_URL = 'https://your-project.supabase.co';
-   const SUPABASE_ANON_KEY = 'your-anon-key-here';
+2. Install the [Supabase CLI](https://supabase.com/docs/guides/cli/getting-started):
+   ```bash
+   brew install supabase/tap/supabase   # macOS
+   # or: npm install -g supabase
    ```
 
-4. Rebuild the extension.
+3. Link your project:
+   ```bash
+   supabase login
+   supabase link --project-ref <your-project-ref>
+   ```
 
-5. Open the extension popup, go to the **Devices** tab, and click **"Create Sync Group"** to generate a pairing code. Enter that code on your other devices.
+4. Deploy the schema migration Edge Function:
+   ```bash
+   supabase functions deploy setup-schema
+   ```
+   This creates a server-side function that auto-creates the database tables
+   when the extension first connects. The function runs with admin privileges
+   (service_role key) so the extension's anon key never needs DDL access.
+
+5. Create a `.env` file in the project root:
+   ```bash
+   cp .env.example .env
+   ```
+   Fill in your Supabase credentials:
+   ```
+   SUPABASE_URL=https://your-project-id.supabase.co
+   SUPABASE_ANON_KEY=your-anon-key-here
+   ```
+
+6. Rebuild the extension:
+   ```bash
+   bun run build        # Chrome
+   bun run build:firefox # Firefox
+   ```
+
+7. Open the extension popup, go to the **Devices** tab, and click **"Create Sync Group"**.
+   The extension will automatically set up the database tables on first use.
+   Share the pairing code with your other devices.
+
+> **Note:** You can also apply the schema manually by running
+> `supabase/migrations/001_initial_schema.sql` in the Supabase SQL editor
+> instead of deploying the Edge Function.
 
 ## Project Structure
 
@@ -173,5 +205,7 @@ lib/
   tracker/               # YouTube page detection, metadata extraction
 
 supabase/
-  migrations/            # Postgres schema for sync
+  functions/             # Edge Functions (deployed to Supabase)
+    setup-schema/        # Auto-applies DB migrations on first use
+  migrations/            # Postgres schema (reference / manual apply)
 ```

@@ -8,6 +8,7 @@
 
 import { getSupabaseClient } from './supabase-client';
 import { getOrCreateDeviceId } from '../background/history-handler';
+import { ensureRemoteSchema } from './migrations';
 import * as db from '../db/client';
 
 // Characters used for pairing codes.
@@ -77,6 +78,9 @@ export async function createSyncGroup(): Promise<{
   pairingCode: string;
   deviceId: string;
 }> {
+  // Ensure remote Supabase tables exist before inserting rows
+  await ensureRemoteSchema();
+
   const supabase = getSupabaseClient();
   const pairingCode = generatePairingCode();
   const deviceId = await getOrCreateDeviceId();
@@ -125,6 +129,9 @@ export async function joinSyncGroup(code: string): Promise<{
   groupId: string;
   deviceId: string;
 }> {
+  // Ensure remote Supabase tables exist before querying
+  await ensureRemoteSchema();
+
   const supabase = getSupabaseClient();
   const normalizedCode = code.trim().toUpperCase();
   const deviceId = await getOrCreateDeviceId();

@@ -13,6 +13,7 @@ stats.html
 stats-*.json
 .wxt
 web-ext.config.ts
+.temp
 
 # Environment variables (contain secrets)
 .env
