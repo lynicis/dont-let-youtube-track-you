@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1280">
+<title>Devices Tab - Screenshot</title>
+<style>
+/* ── Page canvas (1280x800) ── */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body {
+  width: 1280px;
+  height: 800px;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 40%, #16213e 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Popup container ── */
+.popup {
+  width: 400px;
+  height: 500px;
+  display: flex;
+  flex-direction: column;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  overflow: hidden;
+  border-radius: 12px;
+  box-shadow: 0 25px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05);
+  transform: scale(1.35);
+}
+
+/* ── Header ── */
+.popup__header {
+  padding: 12px 16px 8px;
+  border-bottom: 1px solid #2a2a4a;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.popup__icon { width: 22px; height: 22px; flex-shrink: 0; }
+.popup__title { margin: 0; font-size: 15px; font-weight: 600; letter-spacing: 0.3px; }
+
+/* ── Tab Bar ── */
+.popup__tabs {
+  display: flex;
+  border-bottom: 1px solid #2a2a4a;
+  background: #1a1a2e;
+  padding: 0 8px;
+}
+.popup__tab {
+  flex: 1;
+  padding: 8px 0;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #8888a0;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+}
+.popup__tab--active {
+  color: #ff0000;
+  border-bottom-color: #ff0000;
+}
+.tab-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  margin-left: 5px;
+  vertical-align: middle;
+  background: #22c55e;
+}
+
+/* ── Content ── */
+.popup__content {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Pairing ── */
+.pairing {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  overflow-y: auto;
+  flex: 1;
+}
+.pairing__connected {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.pairing__connected-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #22c55e;
+}
+.pairing__code-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.pairing__label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #e0e0e0;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.pairing__hint {
+  margin: 0;
+  font-size: 12px;
+  color: #666680;
+  line-height: 1.4;
+}
+.pairing__code-display {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.pairing__code {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 4px;
+  padding: 8px 14px;
+  background: #0f0f23;
+  border: 1px solid #3a3a5a;
+  border-radius: 6px;
+  color: #e0e0e0;
+}
+.pairing__copy-btn {
+  padding: 6px 10px;
+  background: #1f1f3a;
+  border: 1px solid #2a2a4a;
+  border-radius: 6px;
+  color: #8888a0;
+  font-size: 11px;
+  font-family: inherit;
+  cursor: pointer;
+}
+.pairing__devices {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.pairing__device-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.pairing__device {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: #1f1f3a;
+  border-radius: 6px;
+}
+.pairing__device-name {
+  font-size: 13px;
+  color: #e0e0e0;
+}
+.pairing__device-seen {
+  font-size: 11px;
+  color: #666680;
+}
+.pairing__btn {
+  padding: 8px 14px;
+  border: 1px solid #2a2a4a;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  color: #e0e0e0;
+  background: #1f1f3a;
+}
+.pairing__btn--danger {
+  background: none;
+  border-color: #ff0000;
+  color: #ff0000;
+}
+
+/* ── Sync Status ── */
+.sync-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 16px;
+  border-top: 1px solid #2a2a4a;
+  background: #16213e;
+  font-size: 11px;
+  color: #8888a0;
+  flex-shrink: 0;
+}
+.sync-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.sync-dot--green { background: #22c55e; }
+</style>
+</head>
+<body>
+
+<div class="popup">
+  <header class="popup__header">
+    <svg class="popup__icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="22" height="22">
+      <defs><clipPath id="rs"><rect x="4" y="4" width="120" height="120" rx="24" ry="24"/></clipPath></defs>
+      <rect x="4" y="4" width="120" height="120" rx="24" ry="24" fill="#1a1a2e"/>
+      <g clip-path="url(#rs)">
+        <path d="M64 36 C38 36, 18 64, 18 64 C18 64, 38 92, 64 92 C90 92, 110 64, 110 64 C110 64, 90 36, 64 36 Z" fill="none" stroke="#ff0000" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="64" cy="64" r="14" fill="none" stroke="#ff0000" stroke-width="5.5"/>
+        <circle cx="64" cy="64" r="5" fill="#ff0000"/>
+        <line x1="30" y1="98" x2="98" y2="30" stroke="#ff0000" stroke-width="6.5" stroke-linecap="round"/>
+      </g>
+    </svg>
+    <h1 class="popup__title">YouTube History</h1>
+  </header>
+
+  <nav class="popup__tabs">
+    <button class="popup__tab">History</button>
+    <button class="popup__tab popup__tab--active">Devices <span class="tab-dot"></span></button>
+    <button class="popup__tab">Settings</button>
+  </nav>
+
+  <main class="popup__content">
+    <div class="pairing">
+      <div class="pairing__connected">
+        <span class="sync-dot sync-dot--green"></span>
+        <span class="pairing__connected-label">Connected</span>
+      </div>
+
+      <div class="pairing__code-section">
+        <label class="pairing__label">Pairing Code</label>
+        <div class="pairing__code-display">
+          <code class="pairing__code">X7K2M9</code>
+          <button class="pairing__copy-btn">Copy</button>
+        </div>
+        <p class="pairing__hint">Share this code with your other devices</p>
+      </div>
+
+      <div class="pairing__devices">
+        <label class="pairing__label">Devices (3)</label>
+        <ul class="pairing__device-list">
+          <li class="pairing__device">
+            <span class="pairing__device-name">MacBook Pro - Chrome</span>
+            <span class="pairing__device-seen">Just now</span>
+          </li>
+          <li class="pairing__device">
+            <span class="pairing__device-name">Windows Desktop - Firefox</span>
+            <span class="pairing__device-seen">5m ago</span>
+          </li>
+          <li class="pairing__device">
+            <span class="pairing__device-name">Linux Laptop - Chrome</span>
+            <span class="pairing__device-seen">2h ago</span>
+          </li>
+        </ul>
+      </div>
+
+      <button class="pairing__btn pairing__btn--danger">Leave Group</button>
+    </div>
+  </main>
+
+  <div class="sync-status">
+    <span class="sync-dot sync-dot--green"></span>
+    <span>Synced &middot; 3 devices</span>
+  </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1280">
+<title>Settings Tab - Screenshot</title>
+<style>
+/* ── Page canvas (1280x800) ── */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body {
+  width: 1280px;
+  height: 800px;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 40%, #16213e 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Popup container ── */
+.popup {
+  width: 400px;
+  height: 500px;
+  display: flex;
+  flex-direction: column;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  overflow: hidden;
+  border-radius: 12px;
+  box-shadow: 0 25px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05);
+  transform: scale(1.35);
+}
+
+/* ── Header ── */
+.popup__header {
+  padding: 12px 16px 8px;
+  border-bottom: 1px solid #2a2a4a;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.popup__icon { width: 22px; height: 22px; flex-shrink: 0; }
+.popup__title { margin: 0; font-size: 15px; font-weight: 600; letter-spacing: 0.3px; }
+
+/* ── Tab Bar ── */
+.popup__tabs {
+  display: flex;
+  border-bottom: 1px solid #2a2a4a;
+  background: #1a1a2e;
+  padding: 0 8px;
+}
+.popup__tab {
+  flex: 1;
+  padding: 8px 0;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #8888a0;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+}
+.popup__tab--active {
+  color: #ff0000;
+  border-bottom-color: #ff0000;
+}
+.tab-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  margin-left: 5px;
+  vertical-align: middle;
+  background: #22c55e;
+}
+
+/* ── Content ── */
+.popup__content {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Settings Panel ── */
+.settings {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+  overflow-y: auto;
+  flex: 1;
+}
+.settings__section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.settings__section--danger {
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 0, 0, 0.2);
+}
+.settings__label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #e0e0e0;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.settings__label--danger {
+  color: #ff0000;
+}
+.settings__hint {
+  margin: 0;
+  font-size: 12px;
+  color: #666680;
+  line-height: 1.4;
+}
+.settings__select {
+  background: #0f0f23;
+  border: 1px solid #2a2a4a;
+  border-radius: 6px;
+  padding: 6px 10px;
+  color: #e0e0e0;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 3 3-3' fill='none' stroke='%238888a0' stroke-width='1.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 28px;
+}
+.settings__btn-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.settings__btn {
+  padding: 7px 14px;
+  border: 1px solid #2a2a4a;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  color: #e0e0e0;
+  background: #1f1f3a;
+}
+.settings__btn--danger {
+  background: none;
+  border-color: #ff0000;
+  color: #ff0000;
+}
+.settings__file-input {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  color: #8888a0;
+}
+.settings__file-input::file-selector-button {
+  padding: 5px 10px;
+  border: 1px solid #2a2a4a;
+  border-radius: 6px;
+  background: #1f1f3a;
+  color: #e0e0e0;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  margin-right: 8px;
+}
+
+/* ── Sync Status ── */
+.sync-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 16px;
+  border-top: 1px solid #2a2a4a;
+  background: #16213e;
+  font-size: 11px;
+  color: #8888a0;
+  flex-shrink: 0;
+}
+.sync-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.sync-dot--green { background: #22c55e; }
+</style>
+</head>
+<body>
+
+<div class="popup">
+  <header class="popup__header">
+    <svg class="popup__icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="22" height="22">
+      <defs><clipPath id="rs"><rect x="4" y="4" width="120" height="120" rx="24" ry="24"/></clipPath></defs>
+      <rect x="4" y="4" width="120" height="120" rx="24" ry="24" fill="#1a1a2e"/>
+      <g clip-path="url(#rs)">
+        <path d="M64 36 C38 36, 18 64, 18 64 C18 64, 38 92, 64 92 C90 92, 110 64, 110 64 C110 64, 90 36, 64 36 Z" fill="none" stroke="#ff0000" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="64" cy="64" r="14" fill="none" stroke="#ff0000" stroke-width="5.5"/>
+        <circle cx="64" cy="64" r="5" fill="#ff0000"/>
+        <line x1="30" y1="98" x2="98" y2="30" stroke="#ff0000" stroke-width="6.5" stroke-linecap="round"/>
+      </g>
+    </svg>
+    <h1 class="popup__title">YouTube History</h1>
+  </header>
+
+  <nav class="popup__tabs">
+    <button class="popup__tab">History</button>
+    <button class="popup__tab">Devices <span class="tab-dot"></span></button>
+    <button class="popup__tab popup__tab--active">Settings</button>
+  </nav>
+
+  <main class="popup__content">
+    <div class="settings">
+      <!-- Retention Period -->
+      <section class="settings__section">
+        <label class="settings__label">Retention Period</label>
+        <p class="settings__hint">Automatically delete entries older than this.</p>
+        <select class="settings__select">
+          <option>30 days</option>
+          <option>60 days</option>
+          <option selected>90 days</option>
+          <option>180 days</option>
+          <option>365 days</option>
+          <option>Forever</option>
+        </select>
+      </section>
+
+      <!-- Export -->
+      <section class="settings__section">
+        <label class="settings__label">Export Data</label>
+        <p class="settings__hint">Download your browsing history.</p>
+        <div class="settings__btn-row">
+          <button class="settings__btn">Export as JSON</button>
+          <button class="settings__btn">Export as CSV</button>
+        </div>
+      </section>
+
+      <!-- Import -->
+      <section class="settings__section">
+        <label class="settings__label">Import Data</label>
+        <p class="settings__hint">Import history from a previously exported JSON file.</p>
+        <div class="settings__btn-row">
+          <input type="file" accept=".json" class="settings__file-input">
+          <button class="settings__btn">Import</button>
+        </div>
+      </section>
+
+      <!-- Danger Zone -->
+      <section class="settings__section settings__section--danger">
+        <label class="settings__label settings__label--danger">Danger Zone</label>
+        <button class="settings__btn settings__btn--danger">Clear All History</button>
+      </section>
+    </div>
+  </main>
+
+  <div class="sync-status">
+    <span class="sync-dot sync-dot--green"></span>
+    <span>Synced &middot; 3 devices</span>
+  </div>
+</div>
+
+</body>
+</html>
