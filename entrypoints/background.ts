@@ -39,11 +39,6 @@ export default defineBackground(() => {
 
     const { type, data } = message as { type: string; data?: unknown };
 
-    // Let db-request messages pass through to the offscreen document's listener.
-    // Returning undefined (no return) tells Chrome this listener doesn't handle
-    // the message, so it reaches the offscreen document.
-    if (type === 'db-request') return;
-
     switch (type) {
       // -- Content script messages --
 

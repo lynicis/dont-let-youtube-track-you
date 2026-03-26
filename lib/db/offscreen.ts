@@ -1,11 +1,15 @@
 /**
  * Offscreen document script that hosts the wa-sqlite Web Worker.
  *
- * This bridges communication between the background service worker
- * (via chrome.runtime messages) and the DB Web Worker (via postMessage).
+ * Communication uses the Service Worker messaging API:
+ *   - Receives requests via  navigator.serviceWorker  'message' events
+ *     (sent by the background SW via client.postMessage).
+ *   - Sends responses back via navigator.serviceWorker.controller.postMessage.
+ *
+ * This avoids chrome.runtime.sendMessage broadcast issues where the
+ * background's own onMessage listener would intercept DB requests.
  */
 
-import { browser, type Browser } from 'wxt/browser';
 import type { DbRequest, DbResponse } from '@/lib/db/types';
 
 let worker: Worker | null = null;
@@ -76,15 +80,29 @@ async function handleDbRequest(request: DbRequest): Promise<DbResponse> {
   });
 }
 
-// Listen for messages from the background service worker
-browser.runtime.onMessage.addListener(
-  (message: unknown, _sender: Browser.runtime.MessageSender) => {
-    const msg = message as DbRequest;
-    if (msg.type !== 'db-request') return;
-
-    // Return a promise for async response (supported by browser.runtime.onMessage)
-    return handleDbRequest(msg);
+/**
+ * Send a response back to the background service worker via the
+ * ServiceWorker controller postMessage channel.
+ */
+function sendToServiceWorker(response: DbResponse): void {
+  const controller = navigator.serviceWorker?.controller;
+  if (controller) {
+    controller.postMessage(response);
+  } else {
+    console.error('[db-offscreen] No SW controller available to send response');
   }
-);
+}
+
+// Listen for messages from the background service worker.
+// The SW sends messages via client.postMessage() (from clients.matchAll()),
+// which arrives as a 'message' event on navigator.serviceWorker.
+navigator.serviceWorker.addEventListener('message', (event) => {
+  const msg = event.data as DbRequest;
+  if (!msg || msg.type !== 'db-request') return;
+
+  handleDbRequest(msg).then((response) => {
+    sendToServiceWorker(response);
+  });
+});
 
 console.log('[db-offscreen] Offscreen document loaded');

@@ -1,14 +1,15 @@
 /**
  * Background-facing DB client.
  *
- * On Chrome: communicates with the offscreen document via chrome.runtime.sendMessage.
+ * On Chrome: communicates with the offscreen document via the Service Worker
+ * clients API (postMessage). This avoids the broadcast problem with
+ * chrome.runtime.sendMessage where other onMessage listeners intercept the
+ * message before the offscreen document can respond.
+ *
  * On Firefox/Safari: spawns the Web Worker directly from the background script
  * (Firefox MV3 supports Workers in background scripts; there is no offscreen API).
- *
- * Usage: import { db } from '@/lib/db/client' in the background script.
  */
 
-import { browser } from 'wxt/browser';
 import { v4 as uuidv4 } from 'uuid';
 import type {
   DbOperation,
@@ -18,19 +19,43 @@ import type {
   BrowsingHistoryInput,
 } from './types';
 
+// ---- Service Worker global type helpers ----
+// These types exist at runtime in the SW context but aren't in the default
+// TypeScript lib.  We declare lightweight shims so the rest of the file
+// type-checks without pulling in the full WebWorker lib (which conflicts
+// with the DOM lib used elsewhere in the project).
+
+declare const self: {
+  location: { origin: string };
+  clients: {
+    matchAll(opts?: {
+      type?: string;
+      includeUncontrolled?: boolean;
+    }): Promise<Array<{ url: string; postMessage(msg: unknown): void }>>;
+  };
+  addEventListener(type: 'message', handler: (event: { data: unknown }) => void): void;
+};
+
+/** A matched SW client that we can postMessage to. */
+type SwClient = { url: string; postMessage(msg: unknown): void };
+
 const OFFSCREEN_DOCUMENT_PATH = '/db-offscreen.html';
 
-/** How long to wait for a DB operation response before giving up (ms). */
-const REQUEST_TIMEOUT_MS = 10_000;
+/** How long to wait for a single DB operation response (ms). */
+const REQUEST_TIMEOUT_MS = 15_000;
 
-/**
- * Maximum number of retries when the offscreen document hasn't registered its
- * listener yet (returns undefined).  This only matters during cold start.
- */
-const MAX_RETRIES = 5;
-const RETRY_DELAY_MS = 300;
+/** How long to wait for the offscreen document to become a SW client (ms). */
+const CLIENT_DISCOVERY_TIMEOUT_MS = 5_000;
+const CLIENT_DISCOVERY_INTERVAL_MS = 200;
 
-// ---- Chrome offscreen approach ----
+// ---- Shared pending-request map ----
+
+const pendingRequests = new Map<
+  string,
+  { resolve: (data: unknown) => void; reject: (err: Error) => void }
+>();
+
+// ---- Chrome offscreen approach (via SW clients API) ----
 
 let offscreenCreating: Promise<void> | null = null;
 
@@ -80,12 +105,70 @@ async function ensureOffscreenDocument(): Promise<void> {
   offscreenCreating = null;
 }
 
-/** Send a DB request via chrome.runtime.sendMessage to the offscreen document. */
+/**
+ * Find the offscreen document among the Service Worker's controlled clients.
+ * The offscreen doc's URL ends with OFFSCREEN_DOCUMENT_PATH.
+ */
+async function findOffscreenClient(): Promise<SwClient | null> {
+  const allClients = await self.clients.matchAll({
+    type: 'window',
+    includeUncontrolled: true,
+  });
+  const offscreenUrl = new URL(OFFSCREEN_DOCUMENT_PATH, self.location.origin)
+    .href;
+  return allClients.find((c) => c.url === offscreenUrl) ?? null;
+}
+
+/**
+ * Wait until the offscreen document shows up as a SW client.
+ * createDocument() resolves before the document has fully loaded, so we poll.
+ */
+async function waitForOffscreenClient(): Promise<SwClient> {
+  const deadline = Date.now() + CLIENT_DISCOVERY_TIMEOUT_MS;
+  while (Date.now() < deadline) {
+    const client = await findOffscreenClient();
+    if (client) return client;
+    await new Promise((r) => setTimeout(r, CLIENT_DISCOVERY_INTERVAL_MS));
+  }
+  throw new Error(
+    'Offscreen document did not appear as a SW client within timeout',
+  );
+}
+
+let offscreenListenerRegistered = false;
+
+/**
+ * Register a one-time listener on the SW global scope for messages coming back
+ * from the offscreen document via navigator.serviceWorker.controller.postMessage.
+ */
+function ensureSwMessageListener(): void {
+  if (offscreenListenerRegistered) return;
+  offscreenListenerRegistered = true;
+
+  self.addEventListener('message', (event: { data: unknown }) => {
+    const data = event.data as DbResponse | undefined;
+    if (!data || data.type !== 'db-response') return;
+
+    const pending = pendingRequests.get(data.requestId);
+    if (!pending) return;
+    pendingRequests.delete(data.requestId);
+
+    if (data.ok) {
+      pending.resolve(data.data);
+    } else {
+      pending.reject(new Error(data.error));
+    }
+  });
+}
+
+/** Send a DB request to the offscreen document via the SW clients API. */
 async function sendViaOffscreen(
   operation: DbOperation,
   params: unknown,
 ): Promise<unknown> {
+  ensureSwMessageListener();
   await ensureOffscreenDocument();
+  const client = await waitForOffscreenClient();
 
   const request: DbRequest = {
     type: 'db-request',
@@ -94,43 +177,35 @@ async function sendViaOffscreen(
     params,
   };
 
-  // Retry loop: the offscreen document may still be loading its script /
-  // registering its onMessage listener after createDocument() resolves.
-  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-    const response = await Promise.race([
-      browser.runtime.sendMessage(request) as Promise<DbResponse | undefined>,
-      new Promise<undefined>((resolve) =>
-        setTimeout(() => resolve(undefined), REQUEST_TIMEOUT_MS),
-      ),
-    ]);
-
-    // A real response (success or error) — return it.
-    if (response && typeof response === 'object' && 'type' in response) {
-      if (!response.ok) {
-        throw new Error(response.error);
-      }
-      return response.data;
-    }
-
-    // No response: offscreen listener probably not ready yet.
-    if (attempt < MAX_RETRIES) {
-      console.warn(
-        `[db-client] No response for ${operation} (attempt ${attempt + 1}/${MAX_RETRIES + 1}), retrying…`,
+  return new Promise<unknown>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      pendingRequests.delete(request.requestId);
+      reject(
+        new Error(
+          `DB operation timed out: ${operation} (${REQUEST_TIMEOUT_MS}ms)`,
+        ),
       );
-      await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
-    }
-  }
+    }, REQUEST_TIMEOUT_MS);
 
-  throw new Error(
-    `No response for DB operation: ${operation} (after ${MAX_RETRIES + 1} attempts)`,
-  );
+    pendingRequests.set(request.requestId, {
+      resolve: (data) => {
+        clearTimeout(timer);
+        resolve(data);
+      },
+      reject: (err) => {
+        clearTimeout(timer);
+        reject(err);
+      },
+    });
+
+    client.postMessage(request);
+  });
 }
 
 // ---- Firefox/Safari direct-worker approach ----
 
 let directWorker: Worker | null = null;
 let directWorkerReady: Promise<void> | null = null;
-const pendingRequests = new Map<string, (response: DbResponse) => void>();
 
 /**
  * Initialise a Web Worker directly (Firefox/Safari background scripts support
@@ -166,10 +241,16 @@ function ensureDirectWorker(): Promise<void> {
         }
 
         // Route to pending request
-        const resolver = pendingRequests.get(response.requestId);
-        if (resolver) {
+        const pending = pendingRequests.get(response.requestId);
+        if (pending) {
           pendingRequests.delete(response.requestId);
-          resolver(response);
+          if (response.ok) {
+            pending.resolve(response.data);
+          } else {
+            pending.reject(
+              new Error(response.ok === false ? response.error : 'Unknown error'),
+            );
+          }
         }
       };
 
@@ -205,13 +286,7 @@ async function sendViaDirect(
   };
 
   return new Promise<unknown>((resolve, reject) => {
-    pendingRequests.set(request.requestId, (response) => {
-      if (response.ok) {
-        resolve(response.data);
-      } else {
-        reject(new Error(response.ok === false ? response.error : 'Unknown error'));
-      }
-    });
+    pendingRequests.set(request.requestId, { resolve, reject });
     directWorker!.postMessage(request);
   });
 }
