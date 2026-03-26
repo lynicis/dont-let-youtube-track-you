@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <clipPath id="roundedSquare">
+      <rect x="4" y="4" width="120" height="120" rx="24" ry="24"/>
+    </clipPath>
+  </defs>
+  
+  <!-- Rounded square background -->
+  <rect x="4" y="4" width="120" height="120" rx="24" ry="24" fill="#1a1a2e"/>
+  
+  <!-- Eye shape - outer -->
+  <g clip-path="url(#roundedSquare)">
+    <!-- Eye outline path (almond shape) -->
+    <path d="M64 36 C38 36, 18 64, 18 64 C18 64, 38 92, 64 92 C90 92, 110 64, 110 64 C110 64, 90 36, 64 36 Z" 
+          fill="none" stroke="#ff0000" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
+    
+    <!-- Iris circle -->
+    <circle cx="64" cy="64" r="14" fill="none" stroke="#ff0000" stroke-width="5.5"/>
+    
+    <!-- Pupil dot -->
+    <circle cx="64" cy="64" r="5" fill="#ff0000"/>
+    
+    <!-- Diagonal slash line -->
+    <line x1="30" y1="98" x2="98" y2="30" stroke="#ff0000" stroke-width="6.5" stroke-linecap="round"/>
+  </g>
+</svg>
