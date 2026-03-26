@@ -1,5 +1,8 @@
 # Don't Let YouTube Track You
 
+[![Chrome Web Store](https://img.shields.io/chrome-web-store/v/YOUR_EXTENSION_ID?logo=googlechrome&logoColor=white&label=Chrome%20Web%20Store)](https://chromewebstore.google.com/detail/YOUR_EXTENSION_ID)
+[![Firefox Add-ons](https://img.shields.io/amo/v/YOUR_ADDON_SLUG?logo=firefox&logoColor=white&label=Firefox%20Add-ons)](https://addons.mozilla.org/firefox/addon/YOUR_ADDON_SLUG/)
+
 A browser extension that privately tracks your YouTube browsing history in a local SQLite database and syncs it across devices via Supabase -- without needing a Google account.
 
 ## Features

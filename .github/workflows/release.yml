@@ -1,0 +1,113 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+env:
+  PROJECT_NAME: dont-let-youtube-track-you
+
+jobs:
+  Build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Set version from release tag
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          # Patch package.json so WXT picks up the version for the manifest
+          bun x dot-json package.json version "$VERSION"
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Build and zip Chrome extension
+        run: bun run zip
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+
+      - name: Build and zip Firefox extension
+        run: bun run zip:firefox
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+
+      - name: Upload Chrome zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: chrome-zip
+          path: .output/${{ env.PROJECT_NAME }}-${{ env.VERSION }}-chrome.zip
+
+      - name: Upload Firefox zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: firefox-zip
+          path: .output/${{ env.PROJECT_NAME }}-${{ env.VERSION }}-firefox.zip
+
+      - name: Upload Firefox sources zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: firefox-sources-zip
+          path: .output/${{ env.PROJECT_NAME }}-${{ env.VERSION }}-sources.zip
+
+  Chrome:
+    needs: Build
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: chrome-zip
+
+      - name: Submit to Chrome Web Store
+        run: npx chrome-webstore-upload-cli@3 upload --auto-publish
+        env:
+          EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
+          CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
+          REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
+
+  Firefox:
+    needs: Build
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: firefox-zip
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: firefox-sources-zip
+
+      - name: Submit to Firefox Add-ons (AMO)
+        run: npx web-ext@9 sign --channel=listed --upload-source-code
+        env:
+          WEB_EXT_API_KEY: ${{ secrets.WEB_EXT_API_KEY }}
+          WEB_EXT_API_SECRET: ${{ secrets.WEB_EXT_API_SECRET }}
+
+  Attach-Assets:
+    needs: Build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: chrome-zip
+          path: artifacts
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: firefox-zip
+          path: artifacts
+
+      - name: Upload zips to GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "$GITHUB_REF_NAME" artifacts/*.zip --repo "$GITHUB_REPOSITORY"
