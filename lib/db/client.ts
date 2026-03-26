@@ -20,6 +20,16 @@ import type {
 
 const OFFSCREEN_DOCUMENT_PATH = '/db-offscreen.html';
 
+/** How long to wait for a DB operation response before giving up (ms). */
+const REQUEST_TIMEOUT_MS = 10_000;
+
+/**
+ * Maximum number of retries when the offscreen document hasn't registered its
+ * listener yet (returns undefined).  This only matters during cold start.
+ */
+const MAX_RETRIES = 5;
+const RETRY_DELAY_MS = 300;
+
 // ---- Chrome offscreen approach ----
 
 let offscreenCreating: Promise<void> | null = null;
@@ -84,15 +94,36 @@ async function sendViaOffscreen(
     params,
   };
 
-  const response = (await browser.runtime.sendMessage(request)) as DbResponse;
+  // Retry loop: the offscreen document may still be loading its script /
+  // registering its onMessage listener after createDocument() resolves.
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    const response = await Promise.race([
+      browser.runtime.sendMessage(request) as Promise<DbResponse | undefined>,
+      new Promise<undefined>((resolve) =>
+        setTimeout(() => resolve(undefined), REQUEST_TIMEOUT_MS),
+      ),
+    ]);
 
-  if (!response) {
-    throw new Error(`No response for DB operation: ${operation}`);
+    // A real response (success or error) — return it.
+    if (response && typeof response === 'object' && 'type' in response) {
+      if (!response.ok) {
+        throw new Error(response.error);
+      }
+      return response.data;
+    }
+
+    // No response: offscreen listener probably not ready yet.
+    if (attempt < MAX_RETRIES) {
+      console.warn(
+        `[db-client] No response for ${operation} (attempt ${attempt + 1}/${MAX_RETRIES + 1}), retrying…`,
+      );
+      await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
+    }
   }
-  if (!response.ok) {
-    throw new Error(response.error);
-  }
-  return response.data;
+
+  throw new Error(
+    `No response for DB operation: ${operation} (after ${MAX_RETRIES + 1} attempts)`,
+  );
 }
 
 // ---- Firefox/Safari direct-worker approach ----
