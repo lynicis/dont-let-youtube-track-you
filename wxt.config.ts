@@ -13,7 +13,6 @@ export default defineConfig({
     permissions: [
       'storage',
       'unlimitedStorage',
-      'tabs',
       // offscreen API is Chrome-only; Firefox/Safari don't have or need it
       ...(browser === 'firefox' ? [] : ['offscreen']),
     ],
@@ -27,17 +26,17 @@ export default defineConfig({
     // browser_specific_settings is only relevant for Firefox (Gecko)
     ...(browser === 'firefox'
       ? {
-          browser_specific_settings: {
-            gecko: {
-              id: 'lynicis@protonmail.com',
-              strict_min_version: '109.0',
-              data_collection_permissions: {
-                required: ['browsingActivity'],
-                optional: ['technicalAndInteraction'],
-              },
+        browser_specific_settings: {
+          gecko: {
+            id: 'dont-let-youtube-track-you@lynicis',
+            strict_min_version: '140.0',
+            data_collection_permissions: {
+              required: ['browsingActivity'],
+              optional: ['technicalAndInteraction'],
             },
           },
-        }
+        },
+      }
       : {}),
   }),
 });
