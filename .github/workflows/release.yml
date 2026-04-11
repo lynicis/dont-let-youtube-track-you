@@ -65,7 +65,7 @@ jobs:
           name: chrome-zip
 
       - name: Submit to Chrome Web Store
-        run: npx chrome-webstore-upload-cli@3 upload --auto-publish
+        run: npx chrome-webstore-upload-cli@3 upload --auto-publish --source $(ls *-chrome.zip)
         env:
           EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
           CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
@@ -85,8 +85,17 @@ jobs:
         with:
           name: firefox-sources-zip
 
+      - name: Unzip Firefox extension
+        run: |
+          mkdir -p extension
+          unzip *-firefox.zip -d extension
+
       - name: Submit to Firefox Add-ons (AMO)
-        run: npx web-ext@9 sign --channel=listed --upload-source-code
+        run: >-
+          npx web-ext@9 sign
+          --channel=listed
+          --source-dir=extension
+          --upload-source-code=$(ls *-sources.zip)
         env:
           WEB_EXT_API_KEY: ${{ secrets.WEB_EXT_API_KEY }}
           WEB_EXT_API_SECRET: ${{ secrets.WEB_EXT_API_SECRET }}
