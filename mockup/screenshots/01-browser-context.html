@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1280">
+<title>Browser Context - Screenshot</title>
+<style>
+/* ── Page canvas (1280x800) ── */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body {
+  width: 1280px;
+  height: 800px;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 40%, #16213e 100%);
+}
+
+/* ── Browser Chrome ── */
+.browser {
+  position: absolute;
+  top: 30px;
+  left: 50px;
+  right: 50px;
+  bottom: 30px;
+  background: #0d0d1a;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  border: 1px solid #2a2a4a;
+}
+
+.browser__titlebar {
+  display: flex;
+  align-items: center;
+  height: 38px;
+  background: #151528;
+  border-bottom: 1px solid #2a2a4a;
+  padding: 0 12px;
+  gap: 8px;
+}
+
+.browser__dots {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.browser__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+.browser__dot--close { background: #ff5f57; }
+.browser__dot--min { background: #febc2e; }
+.browser__dot--max { background: #28c840; }
+
+.browser__tabs {
+  display: flex;
+  gap: 2px;
+  margin-left: 12px;
+  flex: 1;
+  min-width: 0;
+}
+.browser__tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: #1a1a2e;
+  border-radius: 6px 6px 0 0;
+  font-size: 11px;
+  color: #8888a0;
+  white-space: nowrap;
+  max-width: 180px;
+}
+.browser__tab--active {
+  background: #0d0d1a;
+  color: #e0e0e0;
+}
+.browser__tab-icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.browser__toolbar {
+  display: flex;
+  align-items: center;
+  height: 34px;
+  background: #151528;
+  border-bottom: 1px solid #2a2a4a;
+  padding: 0 12px;
+  gap: 8px;
+}
+.browser__nav-btn {
+  color: #666680;
+  font-size: 14px;
+  background: none;
+  border: none;
+  cursor: default;
+  padding: 2px 4px;
+}
+.browser__address {
+  flex: 1;
+  background: #0f0f23;
+  border: 1px solid #2a2a4a;
+  border-radius: 16px;
+  padding: 5px 14px;
+  font-size: 12px;
+  color: #8888a0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.browser__address-lock {
+  color: #666680;
+  font-size: 11px;
+}
+.browser__address-url {
+  color: #e0e0e0;
+}
+
+.browser__ext-icons {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.browser__ext-icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  background: #2a2a4a;
+}
+.browser__ext-icon--active {
+  background: none;
+  position: relative;
+}
+
+/* ── YouTube-like Page Content ── */
+.yt-page {
+  padding: 20px;
+  height: calc(100% - 72px);
+  overflow: hidden;
+}
+.yt-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #1a1a2e;
+  margin-bottom: 20px;
+}
+.yt-logo {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #e0e0e0;
+}
+.yt-logo-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 20px;
+  background: #ff0000;
+  border-radius: 4px;
+  color: white;
+  font-size: 12px;
+}
+.yt-search-bar {
+  flex: 1;
+  max-width: 480px;
+  height: 32px;
+  background: #0f0f23;
+  border: 1px solid #2a2a4a;
+  border-radius: 16px;
+  padding: 0 14px;
+  display: flex;
+  align-items: center;
+  font-size: 12px;
+  color: #666680;
+}
+.yt-nav {
+  display: flex;
+  gap: 16px;
+  font-size: 12px;
+  color: #8888a0;
+}
+.yt-nav span:first-child { color: #e0e0e0; font-weight: 600; }
+
+.yt-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+.yt-thumb {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.yt-thumb__img {
+  width: 100%;
+  aspect-ratio: 16/9;
+  background: #151528;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+.yt-thumb__play {
+  width: 36px;
+  height: 36px;
+  background: rgba(0,0,0,0.6);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #e0e0e0;
+  font-size: 14px;
+}
+.yt-thumb__duration {
+  position: absolute;
+  bottom: 6px;
+  right: 6px;
+  background: rgba(0,0,0,0.8);
+  color: #e0e0e0;
+  font-size: 10px;
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+.yt-thumb__info {
+  display: flex;
+  gap: 8px;
+}
+.yt-thumb__avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #1f1f3a;
+  flex-shrink: 0;
+}
+.yt-thumb__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.yt-thumb__title {
+  font-size: 11px;
+  color: #e0e0e0;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.yt-thumb__channel {
+  font-size: 10px;
+  color: #666680;
+}
+
+/* ── Extension Popup Overlay ── */
+.popup-overlay {
+  position: absolute;
+  top: 76px;
+  right: 80px;
+  z-index: 10;
+  filter: drop-shadow(0 12px 40px rgba(0,0,0,0.7));
+}
+
+.popup {
+  width: 400px;
+  height: 500px;
+  display: flex;
+  flex-direction: column;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  overflow: hidden;
+  border-radius: 12px;
+  box-shadow: 0 25px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.08);
+  transform: scale(0.85);
+  transform-origin: top right;
+}
+
+/* ── Popup Header ── */
+.popup__header {
+  padding: 12px 16px 8px;
+  border-bottom: 1px solid #2a2a4a;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.popup__icon { width: 22px; height: 22px; flex-shrink: 0; }
+.popup__title { margin: 0; font-size: 15px; font-weight: 600; letter-spacing: 0.3px; }
+
+/* ── Tab Bar ── */
+.popup__tabs {
+  display: flex;
+  border-bottom: 1px solid #2a2a4a;
+  background: #1a1a2e;
+  padding: 0 8px;
+}
+.popup__tab {
+  flex: 1;
+  padding: 8px 0;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #8888a0;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+}
+.popup__tab--active {
+  color: #ff0000;
+  border-bottom-color: #ff0000;
+}
+.tab-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  margin-left: 5px;
+  vertical-align: middle;
+  background: #22c55e;
+}
+
+/* ── Content Area ── */
+.popup__content {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── History List ── */
+.history-list {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+.history-list__search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid #2a2a4a;
+}
+.history-list__search-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+.history-list__search-input {
+  flex: 1;
+  background: #0f0f23;
+  border: 1px solid #2a2a4a;
+  border-radius: 6px;
+  padding: 6px 10px;
+  color: #e0e0e0;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+}
+.history-list__search-input::placeholder {
+  color: #666680;
+}
+.history-list__scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: 8px;
+}
+.history-list__group-label {
+  padding: 8px 16px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #666680;
+}
+
+/* ── History Item ── */
+.history-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 16px;
+  background: none;
+  border: none;
+  color: #e0e0e0;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.history-item__icon {
+  flex-shrink: 0;
+  width: 40px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #16213e;
+  border-radius: 4px;
+  font-size: 14px;
+}
+.history-item__content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.history-item__title {
+  font-size: 13px;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.history-item__channel {
+  font-size: 11px;
+  color: #8888a0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.history-item__time {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: #666680;
+}
+
+/* ── Sync Status Bar ── */
+.sync-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 16px;
+  border-top: 1px solid #2a2a4a;
+  background: #16213e;
+  font-size: 11px;
+  color: #8888a0;
+  flex-shrink: 0;
+}
+.sync-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.sync-dot--green { background: #22c55e; }
+
+/* ── Popup Arrow ── */
+.popup-overlay::before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  right: 24px;
+  width: 16px;
+  height: 16px;
+  background: #1a1a2e;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-bottom: none;
+  border-right: none;
+  transform: rotate(45deg);
+}
+</style>
+</head>
+<body>
+
+<!-- Browser Chrome Frame -->
+<div class="browser">
+  <div class="browser__titlebar">
+    <div class="browser__dots">
+      <span class="browser__dot browser__dot--close"></span>
+      <span class="browser__dot browser__dot--min"></span>
+      <span class="browser__dot browser__dot--max"></span>
+    </div>
+    <div class="browser__tabs">
+      <div class="browser__tab browser__tab--active">
+        <svg class="browser__tab-icon" viewBox="0 0 24 24" fill="none">
+          <rect x="2" y="4" width="20" height="16" rx="2" fill="#ff0000"/>
+          <polygon points="10,8 10,16 16,12" fill="white"/>
+        </svg>
+        YouTube
+      </div>
+      <div class="browser__tab">
+        <span style="font-size: 12px; color: #666680;">&#x1F310;</span>
+        GitHub
+      </div>
+      <div class="browser__tab">
+        <span style="font-size: 12px; color: #666680;">&#x1F310;</span>
+        Stack Overflow
+      </div>
+    </div>
+  </div>
+
+  <div class="browser__toolbar">
+    <span class="browser__nav-btn">&#x2190;</span>
+    <span class="browser__nav-btn">&#x2192;</span>
+    <span class="browser__nav-btn">&#x21BB;</span>
+    <div class="browser__address">
+      <span class="browser__address-lock">&#x1F512;</span>
+      <span class="browser__address-url">youtube.com</span>
+    </div>
+    <div class="browser__ext-icons">
+      <span class="browser__ext-icon"></span>
+      <span class="browser__ext-icon browser__ext-icon--active">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="20" height="20">
+          <defs><clipPath id="ext"><rect x="4" y="4" width="120" height="120" rx="24" ry="24"/></clipPath></defs>
+          <rect x="4" y="4" width="120" height="120" rx="24" ry="24" fill="#1a1a2e"/>
+          <g clip-path="url(#ext)">
+            <path d="M64 36 C38 36, 18 64, 18 64 C18 64, 38 92, 64 92 C90 92, 110 64, 110 64 C110 64, 90 36, 64 36 Z" fill="none" stroke="#ff0000" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="64" cy="64" r="14" fill="none" stroke="#ff0000" stroke-width="5.5"/>
+            <circle cx="64" cy="64" r="5" fill="#ff0000"/>
+            <line x1="30" y1="98" x2="98" y2="30" stroke="#ff0000" stroke-width="6.5" stroke-linecap="round"/>
+          </g>
+        </svg>
+      </span>
+      <span class="browser__ext-icon"></span>
+    </div>
+  </div>
+
+  <!-- YouTube-like Page Content -->
+  <div class="yt-page">
+    <div class="yt-header">
+      <div class="yt-logo">
+        <span class="yt-logo-icon">&#x25B6;</span>
+        YouTube
+      </div>
+      <div class="yt-search-bar">Search</div>
+      <div class="yt-nav">
+        <span>Home</span>
+        <span>Shorts</span>
+        <span>Subscriptions</span>
+      </div>
+    </div>
+
+    <div class="yt-grid">
+      <div class="yt-thumb">
+        <div class="yt-thumb__img">
+          <span class="yt-thumb__play">&#x25B6;</span>
+          <span class="yt-thumb__duration">12:34</span>
+        </div>
+        <div class="yt-thumb__info">
+          <div class="yt-thumb__avatar"></div>
+          <div class="yt-thumb__text">
+            <span class="yt-thumb__title">Building a Privacy-First Browser Extension</span>
+            <span class="yt-thumb__channel">Fireship &middot; 24K views</span>
+          </div>
+        </div>
+      </div>
+      <div class="yt-thumb">
+        <div class="yt-thumb__img">
+          <span class="yt-thumb__play">&#x25B6;</span>
+          <span class="yt-thumb__duration">8:21</span>
+        </div>
+        <div class="yt-thumb__info">
+          <div class="yt-thumb__avatar"></div>
+          <div class="yt-thumb__text">
+            <span class="yt-thumb__title">Why You Should Care About Online Privacy</span>
+            <span class="yt-thumb__channel">Techlore &middot; 18K views</span>
+          </div>
+        </div>
+      </div>
+      <div class="yt-thumb">
+        <div class="yt-thumb__img">
+          <span class="yt-thumb__play">&#x25B6;</span>
+          <span class="yt-thumb__duration">22:15</span>
+        </div>
+        <div class="yt-thumb__info">
+          <div class="yt-thumb__avatar"></div>
+          <div class="yt-thumb__text">
+            <span class="yt-thumb__title">How Google Tracks Everything You Do</span>
+            <span class="yt-thumb__channel">The Hated One &middot; 95K views</span>
+          </div>
+        </div>
+      </div>
+      <div class="yt-thumb">
+        <div class="yt-thumb__img">
+          <span class="yt-thumb__play">&#x25B6;</span>
+          <span class="yt-thumb__duration">45:02</span>
+        </div>
+        <div class="yt-thumb__info">
+          <div class="yt-thumb__avatar"></div>
+          <div class="yt-thumb__text">
+            <span class="yt-thumb__title">Rust for TypeScript Developers</span>
+            <span class="yt-thumb__channel">No Boilerplate &middot; 62K views</span>
+          </div>
+        </div>
+      </div>
+      <div class="yt-thumb">
+        <div class="yt-thumb__img">
+          <span class="yt-thumb__play">&#x25B6;</span>
+          <span class="yt-thumb__duration">15:47</span>
+        </div>
+        <div class="yt-thumb__info">
+          <div class="yt-thumb__avatar"></div>
+          <div class="yt-thumb__text">
+            <span class="yt-thumb__title">SQLite is Underrated for Extensions</span>
+            <span class="yt-thumb__channel">Web Dev Simplified &middot; 31K</span>
+          </div>
+        </div>
+      </div>
+      <div class="yt-thumb">
+        <div class="yt-thumb__img">
+          <span class="yt-thumb__play">&#x25B6;</span>
+          <span class="yt-thumb__duration">10:33</span>
+        </div>
+        <div class="yt-thumb__info">
+          <div class="yt-thumb__avatar"></div>
+          <div class="yt-thumb__text">
+            <span class="yt-thumb__title">End-to-End Encryption Explained</span>
+            <span class="yt-thumb__channel">Computerphile &middot; 120K views</span>
+          </div>
+        </div>
+      </div>
+      <div class="yt-thumb">
+        <div class="yt-thumb__img">
+          <span class="yt-thumb__play">&#x25B6;</span>
+          <span class="yt-thumb__duration">28:19</span>
+        </div>
+        <div class="yt-thumb__info">
+          <div class="yt-thumb__avatar"></div>
+          <div class="yt-thumb__text">
+            <span class="yt-thumb__title">The State of Web Privacy in 2026</span>
+            <span class="yt-thumb__channel">Theo - t3.gg &middot; 44K views</span>
+          </div>
+        </div>
+      </div>
+      <div class="yt-thumb">
+        <div class="yt-thumb__img">
+          <span class="yt-thumb__play">&#x25B6;</span>
+          <span class="yt-thumb__duration">6:55</span>
+        </div>
+        <div class="yt-thumb__info">
+          <div class="yt-thumb__avatar"></div>
+          <div class="yt-thumb__text">
+            <span class="yt-thumb__title">Chrome Extensions Manifest V3</span>
+            <span class="yt-thumb__channel">Google Chrome &middot; 87K views</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Extension Popup Overlay -->
+<div class="popup-overlay">
+  <div class="popup">
+    <header class="popup__header">
+      <svg class="popup__icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="22" height="22">
+        <defs><clipPath id="rs"><rect x="4" y="4" width="120" height="120" rx="24" ry="24"/></clipPath></defs>
+        <rect x="4" y="4" width="120" height="120" rx="24" ry="24" fill="#1a1a2e"/>
+        <g clip-path="url(#rs)">
+          <path d="M64 36 C38 36, 18 64, 18 64 C18 64, 38 92, 64 92 C90 92, 110 64, 110 64 C110 64, 90 36, 64 36 Z" fill="none" stroke="#ff0000" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="64" cy="64" r="14" fill="none" stroke="#ff0000" stroke-width="5.5"/>
+          <circle cx="64" cy="64" r="5" fill="#ff0000"/>
+          <line x1="30" y1="98" x2="98" y2="30" stroke="#ff0000" stroke-width="6.5" stroke-linecap="round"/>
+        </g>
+      </svg>
+      <h1 class="popup__title">YouTube History</h1>
+    </header>
+
+    <nav class="popup__tabs">
+      <button class="popup__tab popup__tab--active">History</button>
+      <button class="popup__tab">Devices <span class="tab-dot"></span></button>
+      <button class="popup__tab">Settings</button>
+    </nav>
+
+    <main class="popup__content">
+      <div class="history-list">
+        <div class="history-list__search">
+          <span class="history-list__search-icon">&#x1F50D;</span>
+          <input class="history-list__search-input" type="text" placeholder="Search history..." readonly>
+        </div>
+
+        <div class="history-list__scroll">
+          <div class="history-list__group-label">Today</div>
+
+          <button class="history-item">
+            <span class="history-item__icon">&#x25B6;</span>
+            <div class="history-item__content">
+              <span class="history-item__title">Building a Privacy-First Browser Extension</span>
+              <span class="history-item__channel">Fireship</span>
+            </div>
+            <span class="history-item__time">3m ago</span>
+          </button>
+
+          <button class="history-item">
+            <span class="history-item__icon">&#x25B6;</span>
+            <div class="history-item__content">
+              <span class="history-item__title">Why You Should Care About Online Privacy</span>
+              <span class="history-item__channel">Techlore</span>
+            </div>
+            <span class="history-item__time">27m ago</span>
+          </button>
+
+          <button class="history-item">
+            <span class="history-item__icon">&#x1F50D;</span>
+            <div class="history-item__content">
+              <span class="history-item__title">privacy browser extensions 2026</span>
+            </div>
+            <span class="history-item__time">1h ago</span>
+          </button>
+
+          <button class="history-item">
+            <span class="history-item__icon">&#x1F3AC;</span>
+            <div class="history-item__content">
+              <span class="history-item__title">How Google Tracks Everything You Do</span>
+              <span class="history-item__channel">The Hated One</span>
+            </div>
+            <span class="history-item__time">2h ago</span>
+          </button>
+
+          <div class="history-list__group-label">Yesterday</div>
+
+          <button class="history-item">
+            <span class="history-item__icon">&#x25B6;</span>
+            <div class="history-item__content">
+              <span class="history-item__title">Rust for TypeScript Developers - Full Course</span>
+              <span class="history-item__channel">No Boilerplate</span>
+            </div>
+            <span class="history-item__time">Yesterday</span>
+          </button>
+
+          <button class="history-item">
+            <span class="history-item__icon">&#x1F464;</span>
+            <div class="history-item__content">
+              <span class="history-item__title">Theo - t3.gg</span>
+            </div>
+            <span class="history-item__time">Yesterday</span>
+          </button>
+
+          <button class="history-item">
+            <span class="history-item__icon">&#x25B6;</span>
+            <div class="history-item__content">
+              <span class="history-item__title">SQLite is Underrated for Browser Extensions</span>
+              <span class="history-item__channel">Web Dev Simplified</span>
+            </div>
+            <span class="history-item__time">Yesterday</span>
+          </button>
+
+          <div class="history-list__group-label">This Week</div>
+
+          <button class="history-item">
+            <span class="history-item__icon">&#x1F4CB;</span>
+            <div class="history-item__content">
+              <span class="history-item__title">Web Development Playlist</span>
+            </div>
+            <span class="history-item__time">3d ago</span>
+          </button>
+
+          <button class="history-item">
+            <span class="history-item__icon">&#x25B6;</span>
+            <div class="history-item__content">
+              <span class="history-item__title">End-to-End Encryption Explained Simply</span>
+              <span class="history-item__channel">Computerphile</span>
+            </div>
+            <span class="history-item__time">5d ago</span>
+          </button>
+        </div>
+      </div>
+    </main>
+
+    <div class="sync-status">
+      <span class="sync-dot sync-dot--green"></span>
+      <span>Synced &middot; 3 devices</span>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

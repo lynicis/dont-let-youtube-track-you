@@ -1,0 +1,8 @@
+{
+  "extName": {
+    "message": "Don't Let YouTube Track You"
+  },
+  "extDescription": {
+    "message": "YouTubeの閲覧履歴をローカルデータベースでプライベートに記録。暗号化されたデバイス間同期。Googleアカウント不要。"
+  }
+}

@@ -1,0 +1,21 @@
+Don't Let YouTube Track You keeps your YouTube browsing history private and under your control -- no Google account required. Track every video, search, channel, and playlist you visit in a local database that never leaves your device unless you choose to sync it.
+
+FEATURES:
+- Private YouTube History: Automatically tracks videos, searches, channels, shorts, and playlists you visit
+- 100% Local Storage: Your history is stored in a local SQLite database on your device, not in the cloud
+- Encrypted Cross-Device Sync: Optionally sync your history across multiple devices using end-to-end AES-256 encryption
+- No Account Required: Pair devices with a simple 6-character code -- no sign-ups, no emails, no Google account needed
+- Search & Browse: Quickly find any video or channel from your history with full-text search, organized by time
+- Export & Import: Download your history as JSON or CSV. Import it back anytime. Your data, your format
+- Auto-Cleanup: Set retention periods from 30 days to forever. Old entries are automatically pruned
+- Works Everywhere: Chrome, Firefox, Edge, Brave, Arc, Opera, and Vivaldi
+
+HOW IT WORKS:
+Install the extension and it quietly runs in the background, detecting when you visit YouTube pages. Every video, search, and channel visit is saved to a local SQLite database using your browser's built-in storage. Open the popup to browse, search, and manage your history.
+
+Want to sync across devices? Create a sync group, share the pairing code, and your history syncs automatically -- encrypted before it ever leaves your browser using AES-256-GCM with a key derived from your pairing code. Even the sync server can't read your data.
+
+PRIVACY BY DESIGN:
+No analytics. No telemetry. No cloud storage by default. All sync data is end-to-end encrypted. The extension only accesses youtube.com -- nothing else. Your browsing history is yours alone.
+
+Open source: https://github.com/lynicis/dont-let-youtube-track-you

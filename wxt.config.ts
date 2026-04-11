@@ -7,9 +7,9 @@ export default defineConfig({
     envPrefix: 'SUPABASE_',
   }),
   manifest: ({ browser }) => ({
-    name: "Don't Let YouTube Track You",
-    description:
-      'Privately track your YouTube browsing history and sync across devices without Google tracking',
+    name: '__MSG_extName__',
+    description: '__MSG_extDescription__',
+    default_locale: 'en',
     permissions: [
       'storage',
       'unlimitedStorage',

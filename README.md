@@ -3,6 +3,8 @@
 [![Chrome Web Store](https://img.shields.io/chrome-web-store/v/ngiaafdkahpbemoanahembmikonnngmp?logo=googlechrome&logoColor=white&label=Chrome%20Web%20Store)](https://chromewebstore.google.com/detail/dont-let-youtube-track-yo/ngiaafdkahpbemoanahembmikonnngmp)
 [![Firefox Add-ons](https://img.shields.io/amo/v/don-t-let-youtube-track-you?logo=firefox&logoColor=white&label=Firefox%20Add-ons)](https://addons.mozilla.org/en-US/firefox/addon/don-t-let-youtube-track-you/)
 
+**[Website](https://lynicis.github.io/dont-let-youtube-track-you/)** | **[Privacy Policy](https://lynicis.github.io/dont-let-youtube-track-you/privacy/)**
+
 A browser extension that privately tracks your YouTube browsing history in a local SQLite database and syncs it across devices via Supabase -- without needing a Google account.
 
 ## Features

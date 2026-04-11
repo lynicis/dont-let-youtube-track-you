@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=440">
+<title>Small Promotional Tile - 440x280</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body {
+  width: 440px;
+  height: 280px;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 40%, #16213e 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+}
+
+.icon-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon-glow {
+  position: absolute;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  box-shadow: 0 0 60px 20px rgba(255, 0, 0, 0.15);
+}
+
+.icon {
+  position: relative;
+  z-index: 1;
+}
+
+.name {
+  margin-top: 8px;
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 600;
+  text-align: center;
+  letter-spacing: 0.2px;
+}
+
+.tagline {
+  margin-top: 6px;
+  color: #8888a0;
+  font-size: 13px;
+  text-align: center;
+}
+</style>
+</head>
+<body>
+
+<div class="tile">
+  <div class="icon-wrapper">
+    <div class="icon-glow"></div>
+    <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="80" height="80">
+      <defs><clipPath id="rs"><rect x="4" y="4" width="120" height="120" rx="24" ry="24"/></clipPath></defs>
+      <rect x="4" y="4" width="120" height="120" rx="24" ry="24" fill="#1a1a2e"/>
+      <g clip-path="url(#rs)">
+        <path d="M64 36 C38 36, 18 64, 18 64 C18 64, 38 92, 64 92 C90 92, 110 64, 110 64 C110 64, 90 36, 64 36 Z" fill="none" stroke="#ff0000" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="64" cy="64" r="14" fill="none" stroke="#ff0000" stroke-width="5.5"/>
+        <circle cx="64" cy="64" r="5" fill="#ff0000"/>
+        <line x1="30" y1="98" x2="98" y2="30" stroke="#ff0000" stroke-width="6.5" stroke-linecap="round"/>
+      </g>
+    </svg>
+  </div>
+  <div class="name">Don't Let YouTube Track You</div>
+  <div class="tagline">Your YouTube history. Your control.</div>
+</div>
+
+</body>
+</html>
