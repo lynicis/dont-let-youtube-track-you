@@ -14,6 +14,14 @@ import {
 import { exportAsJson, exportAsCsv } from '@/lib/export/export';
 import { importFromJson } from '@/lib/export/import';
 import { runAutoCleanup, getRetentionDays, setRetentionDays } from '@/lib/db/cleanup';
+import {
+  getLicenseState,
+  activateKey,
+  deactivateKey,
+  revalidateKey,
+  needsRevalidation,
+  getCheckoutUrl,
+} from '@/lib/licensing/license-manager';
 
 export default defineBackground(() => {
   // Wait for the DB worker to be operational before running anything that
@@ -34,6 +42,15 @@ export default defineBackground(() => {
       // Run auto-cleanup on startup based on configured retention period.
       runAutoCleanup().catch((err) => {
         console.error('[background] auto-cleanup error:', err);
+      });
+
+      // Periodically re-validate license key (every 24h).
+      needsRevalidation().then((needs) => {
+        if (needs) {
+          revalidateKey().catch((err) => {
+            console.error('[background] license revalidation error:', err);
+          });
+        }
       });
     })
     .catch((err) => {
@@ -231,6 +248,70 @@ export default defineBackground(() => {
         const mode = db.getPersistenceMode();
         sendResponse({ ok: true, data: mode });
         return; // synchronous response
+      }
+
+      // -- License messages --
+
+      case 'get-license-status': {
+        getLicenseState()
+          .then((state) => sendResponse({ ok: true, data: state }))
+          .catch((err) => {
+            console.error('[background] get-license-status error:', err);
+            sendResponse({ ok: false, error: String(err) });
+          });
+        return true;
+      }
+
+      case 'activate-license': {
+        const { key: licenseKey } = (data ?? {}) as { key: string };
+        activateKey(licenseKey)
+          .then((state) => sendResponse({ ok: true, data: state }))
+          .catch((err) => {
+            console.error('[background] activate-license error:', err);
+            sendResponse({ ok: false, error: String(err) });
+          });
+        return true;
+      }
+
+      case 'deactivate-license': {
+        deactivateKey()
+          .then(() => sendResponse({ ok: true }))
+          .catch((err) => {
+            console.error('[background] deactivate-license error:', err);
+            sendResponse({ ok: false, error: String(err) });
+          });
+        return true;
+      }
+
+      case 'revalidate-license': {
+        revalidateKey()
+          .then((state) => sendResponse({ ok: true, data: state }))
+          .catch((err) => {
+            console.error('[background] revalidate-license error:', err);
+            sendResponse({ ok: false, error: String(err) });
+          });
+        return true;
+      }
+
+      case 'get-checkout-url': {
+        try {
+          const url = getCheckoutUrl();
+          sendResponse({ ok: true, data: url });
+        } catch (err) {
+          sendResponse({ ok: false, error: String(err) });
+        }
+        return;
+      }
+
+      case 'open-checkout': {
+        try {
+          const url = getCheckoutUrl();
+          browser.tabs.create({ url });
+          sendResponse({ ok: true });
+        } catch (err) {
+          sendResponse({ ok: false, error: String(err) });
+        }
+        return true;
       }
 
       default:

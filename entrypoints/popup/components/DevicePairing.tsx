@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { LicenseManager } from './LicenseManager';
 
 interface Device {
   id: string;
@@ -23,12 +24,18 @@ export function DevicePairing() {
   const [success, setSuccess] = useState<string | null>(null);
   const [confirmLeave, setConfirmLeave] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [licenseStatus, setLicenseStatus] = useState<string>('free');
 
   const fetchStatus = useCallback(async () => {
     try {
       const res = await browser.runtime.sendMessage({ type: 'get-sync-status' });
       if (res?.ok && res.data) {
         setStatus(res.data as SyncStatusFull);
+      }
+      // Also fetch license status
+      const licenseRes = await browser.runtime.sendMessage({ type: 'get-license-status' });
+      if (licenseRes?.ok && licenseRes.data) {
+        setLicenseStatus((licenseRes.data as { status: string }).status);
       }
     } catch {
       // ignore
@@ -185,6 +192,12 @@ export function DevicePairing() {
           </ul>
         </div>
 
+        {status.deviceCount >= 3 && licenseStatus !== 'active' && (
+          <div className="pairing__upgrade-prompt">
+            <LicenseManager />
+          </div>
+        )}
+
         <button
           className={`pairing__btn pairing__btn--danger ${confirmLeave ? 'pairing__btn--confirm' : ''}`}
           onClick={handleLeaveGroup}
@@ -258,6 +271,10 @@ export function DevicePairing() {
             {actionLoading ? 'Connecting...' : 'Connect'}
           </button>
         </div>
+      </div>
+
+      <div className="pairing__license-section">
+        <LicenseManager />
       </div>
     </div>
   );

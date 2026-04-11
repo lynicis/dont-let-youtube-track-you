@@ -10,6 +10,8 @@ import { getSupabaseClient } from './supabase-client';
 import { getOrCreateDeviceId } from '../background/history-handler';
 import { ensureRemoteSchema } from './migrations';
 import * as db from '../db/client';
+import { getLicenseState, deactivateKey } from '../licensing/license-manager';
+import { FREE_DEVICE_LIMIT } from '../licensing/types';
 
 // Characters used for pairing codes.
 // Ambiguous characters (0/O, 1/I/L) are excluded to avoid typos.
@@ -150,6 +152,23 @@ export async function joinSyncGroup(code: string): Promise<{
 
   const groupId: string = group.id;
 
+  // Check device count against free tier limit
+  const { data: existingDevices } = await supabase
+    .from('devices')
+    .select('id')
+    .eq('group_id', groupId);
+
+  const currentCount = existingDevices?.length ?? 0;
+
+  if (currentCount >= FREE_DEVICE_LIMIT) {
+    const license = await getLicenseState();
+    if (license.status !== 'active') {
+      throw new Error(
+        `Free plan supports up to ${FREE_DEVICE_LIMIT} devices. Upgrade to Pro Sync to add more.`,
+      );
+    }
+  }
+
   // Register this device
   const { error: deviceError } = await supabase.from('devices').insert({
     id: deviceId,
@@ -180,6 +199,13 @@ export async function leaveSyncGroup(): Promise<void> {
 
   if (deviceId && groupId) {
     await supabase.from('devices').delete().eq('id', deviceId).eq('group_id', groupId);
+  }
+
+  // Deactivate license if active (frees the activation slot)
+  try {
+    await deactivateKey();
+  } catch (err) {
+    console.error('[pairing] license deactivation on leave failed:', err);
   }
 
   // Clear local pairing state

@@ -4,7 +4,7 @@ import { defineConfig } from 'wxt';
 export default defineConfig({
   modules: ['@wxt-dev/module-react'],
   vite: () => ({
-    envPrefix: 'SUPABASE_',
+    envPrefix: ['SUPABASE_', 'LEMONSQUEEZY_'],
   }),
   manifest: ({ browser }) => ({
     name: '__MSG_extName__',
@@ -16,7 +16,7 @@ export default defineConfig({
       // offscreen API is Chrome-only; Firefox/Safari don't have or need it
       ...(browser === 'firefox' ? [] : ['offscreen']),
     ],
-    host_permissions: ['https://*.supabase.co/*'],
+    host_permissions: ['https://*.supabase.co/*', 'https://api.lemonsqueezy.com/*'],
     content_security_policy: {
       extension_pages:
         "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'",

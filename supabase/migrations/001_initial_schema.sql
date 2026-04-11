@@ -108,10 +108,12 @@ CREATE POLICY "Allow delete for anon"
 -- Auto-prune: delete browsing_history older than 90 days
 -- Requires pg_cron extension (enable in Supabase dashboard)
 -- ---------------------------------------------------------------------------
--- To enable, run in Supabase SQL editor:
---
--- SELECT cron.schedule(
---   'prune-old-history',
---   '0 3 * * *',  -- daily at 3 AM UTC
---   $$DELETE FROM browsing_history WHERE created_at < now() - interval '90 days'$$
--- );
+
+CREATE EXTENSION IF NOT EXISTS pg_cron;
+
+SELECT cron.schedule(
+  'prune-old-history',
+  '0 3 * * *',
+  $$DELETE FROM public.browsing_history
+    WHERE created_at < NOW() - INTERVAL '90 days'$$
+);
