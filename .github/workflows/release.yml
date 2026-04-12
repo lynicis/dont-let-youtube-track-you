@@ -25,21 +25,18 @@ jobs:
       - name: Install dependencies
         run: bun install
 
+      - name: Write .env file
+        run: |
+          echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> .env
+          echo "SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}" >> .env
+          echo "LEMONSQUEEZY_STORE_ID=${{ secrets.LEMONSQUEEZY_STORE_ID }}" >> .env
+          echo "LEMONSQUEEZY_CHECKOUT_ID=${{ secrets.LEMONSQUEEZY_CHECKOUT_ID }}" >> .env
+
       - name: Build and zip Chrome extension
         run: bun run zip
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-          LEMONSQUEEZY_STORE_ID: ${{ secrets.LEMONSQUEEZY_STORE_ID }}
-          LEMONSQUEEZY_CHECKOUT_ID: ${{ secrets.LEMONSQUEEZY_CHECKOUT_ID }}
 
       - name: Build and zip Firefox extension
         run: bun run zip:firefox
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-          LEMONSQUEEZY_STORE_ID: ${{ secrets.LEMONSQUEEZY_STORE_ID }}
-          LEMONSQUEEZY_CHECKOUT_ID: ${{ secrets.LEMONSQUEEZY_CHECKOUT_ID }}
 
       - name: Upload Chrome zip
         uses: actions/upload-artifact@v4
