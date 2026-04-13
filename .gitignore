@@ -15,6 +15,7 @@ stats-*.json
 .wxt
 web-ext.config.ts
 .temp
+.playwright-mcp
 
 # Environment variables (contain secrets)
 .env
