@@ -48,6 +48,80 @@
   }
   </script>
 
+  <!-- FAQ Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "Which browser should I use it with?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "For the strongest privacy profile, pair this extension with a hardened, privacy-first browser such as Mullvad Browser, LibreWolf, Brave, Tor Browser, or Firefox with Enhanced Tracking Protection set to Strict. The extension is fully compatible with any Chromium- or Firefox-based browser."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Why use it instead of YouTube's built-in history?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "YouTube's native history requires a Google account and feeds your viewing data into ad targeting. This extension keeps your history 100% local on your device in an encrypted SQLite database. Nothing is sent to Google or anyone else unless you explicitly opt in to end-to-end encrypted sync across your own devices."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Does it work in private/incognito windows?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes, but you need to explicitly enable it. In Chrome/Edge go to chrome://extensions, click Details on the extension, and toggle Allow in Incognito. In Firefox (including Mullvad Browser and LibreWolf), open about:addons, click the extension, and set Run in Private Windows to Allow."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How do I sync my history across devices?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Open the extension popup, go to Settings then Devices, and generate a 6-character pairing code on your first device. Enter the same code on a second device to link them. New entries are encrypted with AES-256-GCM on your device and synced through a zero-knowledge relay."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Can I export or back up my history?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. From the popup, open Settings then Export to save your full history as JSON or CSV. You can re-import either format later."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Does it slow down YouTube or affect playback?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "No. The content script only observes the URL and the video title once per page navigation, then writes a single row to a local SQLite database. There is no network call, no DOM rewriting, and no interference with YouTube's player."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "How long is my history kept?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "You choose. The default retention period is configurable in Settings. Entries older than that window are pruned automatically. You can also clear everything with a single click at any time."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Is it really open source? Can I audit it?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Absolutely. Every line including the sync server is MIT licensed and published on GitHub. You can read it, build it yourself, and verify that what's in the store is exactly what's in the repo."
+        }
+      }
+    ]
+  }
+  </script>
+
   <link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
@@ -73,6 +147,7 @@
         <a href="#features">Features</a>
         <a href="#how-it-works">How it works</a>
         <a href="#privacy">Privacy</a>
+        <a href="#faq">FAQ</a>
         <a href="https://github.com/lynicis/dont-let-youtube-track-you" rel="noopener" class="nav-github" aria-label="GitHub repository">
           <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
           <span>GitHub</span>
@@ -233,6 +308,144 @@
     </div>
   </section>
 
+  <!-- ===== FAQ ===== -->
+  <section id="faq" class="section-faq">
+    <div class="container">
+      <div class="section-header">
+        <span class="section-kicker">FAQ</span>
+        <h2>How should I use this extension?</h2>
+        <p class="section-lead">Pair it with a privacy-respecting browser for the best results &mdash; and find answers to common questions below.</p>
+      </div>
+
+      <div class="faq-list">
+        <details class="faq-item">
+          <summary>
+            <span class="faq-question">Which browser should I use it with?</span>
+            <span class="faq-icon" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </span>
+          </summary>
+          <div class="faq-answer">
+            <p>
+              For the strongest privacy profile, we recommend pairing this extension with a hardened, privacy-first browser. Great options include:
+            </p>
+            <ul>
+              <li><strong><a href="https://mullvad.net/en/browser" rel="noopener">Mullvad Browser</a></strong> &mdash; a Firefox-based browser built by the Tor Project and Mullvad VPN. It ships with fingerprinting resistance, no telemetry, and aggressive anti-tracking defaults out of the box.</li>
+              <li><strong><a href="https://librewolf.net" rel="noopener">LibreWolf</a></strong> &mdash; a Firefox fork focused on privacy, security, and user freedom with telemetry disabled by default.</li>
+              <li><strong><a href="https://brave.com" rel="noopener">Brave</a></strong> &mdash; a Chromium-based browser that blocks trackers and ads by default.</li>
+              <li><strong><a href="https://www.torproject.org" rel="noopener">Tor Browser</a></strong> &mdash; for the maximum anonymity tier (note: some YouTube features may be limited).</li>
+              <li><strong>Firefox</strong> with Enhanced Tracking Protection set to Strict and a container extension like Firefox Multi-Account Containers.</li>
+            </ul>
+            <p>
+              The extension is fully compatible with any Chromium- or Firefox-based browser listed on its store pages (Chrome, Firefox, Edge, Brave, Arc, Opera, Vivaldi, LibreWolf, Mullvad Browser, and more).
+            </p>
+          </div>
+        </details>
+
+        <details class="faq-item">
+          <summary>
+            <span class="faq-question">Why use it instead of YouTube's built-in history?</span>
+            <span class="faq-icon" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </span>
+          </summary>
+          <div class="faq-answer">
+            <p>
+              YouTube's native history requires a Google account and feeds your viewing data into ad targeting and recommendation profiles. This extension keeps your history <strong>100% local</strong> on your device in an encrypted SQLite database. Nothing is sent to Google, our servers, or anyone else &mdash; unless you explicitly opt in to end-to-end encrypted sync across your own devices.
+            </p>
+          </div>
+        </details>
+
+        <details class="faq-item">
+          <summary>
+            <span class="faq-question">Does it work in private/incognito windows?</span>
+            <span class="faq-icon" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </span>
+          </summary>
+          <div class="faq-answer">
+            <p>
+              Yes &mdash; but you need to explicitly enable it. In Chrome/Edge go to <code>chrome://extensions</code>, click <em>Details</em> on the extension, and toggle <em>Allow in Incognito</em>. In Firefox (including Mullvad Browser and LibreWolf), open <code>about:addons</code>, click the extension, and set <em>Run in Private Windows</em> to <em>Allow</em>.
+            </p>
+            <p>
+              Note: privacy-hardened browsers like Mullvad Browser block IndexedDB in Private Browsing mode. The extension automatically falls back to an in-memory store in those cases, so your current session still works but entries are not persisted across restarts.
+            </p>
+          </div>
+        </details>
+
+        <details class="faq-item">
+          <summary>
+            <span class="faq-question">How do I sync my history across devices?</span>
+            <span class="faq-icon" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </span>
+          </summary>
+          <div class="faq-answer">
+            <p>
+              Open the extension popup, go to <em>Settings &rarr; Devices</em>, and generate a 6-character pairing code on your first device. Enter the same code on a second device to link them. From that moment on, new entries are encrypted with AES-256-GCM on your device and synced through a zero-knowledge relay &mdash; the server only ever sees ciphertext.
+            </p>
+          </div>
+        </details>
+
+        <details class="faq-item">
+          <summary>
+            <span class="faq-question">Can I export or back up my history?</span>
+            <span class="faq-icon" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </span>
+          </summary>
+          <div class="faq-answer">
+            <p>
+              Yes. From the popup, open <em>Settings &rarr; Export</em> to save your full history as <strong>JSON</strong> or <strong>CSV</strong>. You can re-import either format later, or keep it alongside your regular backups. Your data, your format &mdash; no vendor lock-in.
+            </p>
+          </div>
+        </details>
+
+        <details class="faq-item">
+          <summary>
+            <span class="faq-question">Does it slow down YouTube or affect playback?</span>
+            <span class="faq-icon" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </span>
+          </summary>
+          <div class="faq-answer">
+            <p>
+              No. The content script only observes the URL and the video title once per page navigation, then writes a single row to a local SQLite database. There is no network call, no DOM rewriting, and no interference with YouTube's player. You will not notice it is there.
+            </p>
+          </div>
+        </details>
+
+        <details class="faq-item">
+          <summary>
+            <span class="faq-question">How long is my history kept?</span>
+            <span class="faq-icon" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </span>
+          </summary>
+          <div class="faq-answer">
+            <p>
+              You choose. The default retention period is configurable in <em>Settings &rarr; Retention</em>. Entries older than that window are pruned automatically, keeping your database lean and fast. You can also clear everything with a single click at any time.
+            </p>
+          </div>
+        </details>
+
+        <details class="faq-item">
+          <summary>
+            <span class="faq-question">Is it really open source? Can I audit it?</span>
+            <span class="faq-icon" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </span>
+          </summary>
+          <div class="faq-answer">
+            <p>
+              Absolutely. Every line &mdash; including the sync server &mdash; is MIT licensed and published on <a href="https://github.com/lynicis/dont-let-youtube-track-you" rel="noopener">GitHub</a>. You can read it, build it yourself, and verify that what's in the store is exactly what's in the repo.
+            </p>
+          </div>
+        </details>
+      </div>
+    </div>
+  </section>
+
   <!-- ===== CTA ===== -->
   <section class="cta-section">
     <div class="container">
@@ -262,6 +475,7 @@
         Don't Let YouTube Track You
       </a>
       <nav class="footer-links">
+        <a href="#faq">FAQ</a>
         <a href="privacy/">Privacy Policy</a>
         <a href="https://github.com/lynicis/dont-let-youtube-track-you" rel="noopener">GitHub</a>
         <a href="https://chromewebstore.google.com/detail/dont-let-youtube-track-yo/ngiaafdkahpbemoanahembmikonnngmp" rel="noopener">Chrome</a>
