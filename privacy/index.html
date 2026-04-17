@@ -3,213 +3,393 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0a0a1a">
   <title>Privacy Policy - Don't Let YouTube Track You</title>
+  <meta name="description" content="Privacy policy for Don't Let YouTube Track You browser extension.">
+  <link rel="canonical" href="https://lynicis.github.io/dont-let-youtube-track-you/privacy/">
+
+  <!-- Favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 128'><rect x='4' y='4' width='120' height='120' rx='24' ry='24' fill='%231a1a2e'/><path d='M64 36C38 36 18 64 18 64s20 28 46 28 46-28 46-28S90 36 64 36Z' fill='none' stroke='%23ff0000' stroke-width='5.5' stroke-linecap='round' stroke-linejoin='round'/><circle cx='64' cy='64' r='14' fill='none' stroke='%23ff0000' stroke-width='5.5'/><circle cx='64' cy='64' r='5' fill='%23ff0000'/><line x1='30' y1='98' x2='98' y2='30' stroke='%23ff0000' stroke-width='6.5' stroke-linecap='round'/></svg>">
+
   <style>
-    body {
-      font-family: system-ui, -apple-system, sans-serif;
-      max-width: 720px;
-      margin: 0 auto;
-      padding: 2rem 1rem;
-      line-height: 1.6;
-      color: #222;
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-base: #070712;
+      --bg-elevated: #0f0f23;
+      --bg-card: rgba(26, 26, 46, 0.6);
+      --text-primary: #f3f3f9;
+      --text-secondary: #a0a0b8;
+      --text-muted: #6a6a85;
+      --accent: #ff2b2b;
+      --accent-hover: #ff4848;
+      --border: rgba(255, 255, 255, 0.08);
+      --border-strong: rgba(255, 255, 255, 0.16);
+      --radius: 16px;
+      --font: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     }
-    h1 { font-size: 1.6rem; margin-bottom: 0.25rem; }
-    h2 { font-size: 1.2rem; margin-top: 2rem; }
-    p, li { font-size: 0.95rem; }
-    ul { padding-left: 1.25rem; }
-    code { background: #f0f0f0; padding: 0.1em 0.3em; border-radius: 3px; font-size: 0.9em; }
-    a { color: #1a6bc4; }
-    .subtitle { color: #666; margin-top: 0; font-size: 0.9rem; }
-    hr { border: none; border-top: 1px solid #ddd; margin: 2rem 0; }
-    table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
-    th, td { text-align: left; padding: 0.5rem; border-bottom: 1px solid #ddd; font-size: 0.9rem; }
-    th { font-weight: 600; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--font);
+      background-color: var(--bg-base);
+      color: var(--text-primary);
+      line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      min-height: 100vh;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      background:
+        radial-gradient(ellipse 800px 600px at 15% -5%, rgba(255, 43, 43, 0.15), transparent 60%),
+        radial-gradient(ellipse 900px 700px at 100% 20%, rgba(120, 0, 180, 0.10), transparent 60%);
+      pointer-events: none;
+    }
+
+    .wrapper {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 3rem 1.5rem 4rem;
+    }
+
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      color: var(--text-secondary);
+      font-size: 0.92rem;
+      text-decoration: none;
+      margin-bottom: 2.5rem;
+      transition: color 0.2s;
+    }
+
+    .back-link:hover { color: var(--accent); }
+
+    h1 {
+      font-size: clamp(1.9rem, 4vw, 2.6rem);
+      font-weight: 800;
+      letter-spacing: -0.025em;
+      margin-bottom: 0.5rem;
+      color: var(--text-primary);
+    }
+
+    h2 {
+      font-size: 1.35rem;
+      margin-top: 2.75rem;
+      margin-bottom: 0.85rem;
+      font-weight: 700;
+      letter-spacing: -0.015em;
+      color: var(--text-primary);
+    }
+
+    p, li {
+      font-size: 0.98rem;
+      color: var(--text-secondary);
+      margin-bottom: 0.75rem;
+    }
+
+    strong { color: var(--text-primary); font-weight: 600; }
+
+    ul {
+      padding-left: 1.4rem;
+      margin-bottom: 1rem;
+    }
+
+    li { margin-bottom: 0.4rem; }
+
+    code {
+      background: rgba(255, 43, 43, 0.1);
+      color: #ff9090;
+      padding: 0.15em 0.4em;
+      border-radius: 5px;
+      font-size: 0.88em;
+      font-family: 'JetBrains Mono', 'SF Mono', ui-monospace, monospace;
+      border: 1px solid rgba(255, 43, 43, 0.15);
+    }
+
+    a {
+      color: var(--accent);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    a:hover { color: var(--accent-hover); text-decoration: underline; }
+
+    .subtitle {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    .subtitle + .subtitle { margin-top: 0.2rem; }
+
+    hr {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 2.5rem 0;
+    }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 1.25rem 0 1.5rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.92rem;
+      color: var(--text-secondary);
+    }
+
+    tr:last-child td { border-bottom: none; }
+
+    th {
+      font-weight: 600;
+      color: var(--text-primary);
+      background: rgba(255, 255, 255, 0.03);
+      letter-spacing: 0.01em;
+    }
+
+    tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
+    .intro-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem 1.75rem;
+      margin: 1.5rem 0 2rem;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+
+    .intro-card p { margin: 0; }
+
+    .footer-note {
+      margin-top: 3rem;
+      padding-top: 2rem;
+      border-top: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 0.88rem;
+      text-align: center;
+    }
+
+    .footer-note a { color: var(--text-secondary); }
+    .footer-note a:hover { color: var(--accent); }
+
+    @media (max-width: 600px) {
+      .wrapper { padding: 2rem 1.25rem 3rem; }
+      h2 { font-size: 1.2rem; }
+      table { font-size: 0.85rem; }
+      th, td { padding: 0.6rem 0.75rem; }
+    }
   </style>
 </head>
 <body>
 
-<p style="margin-bottom: 1.5rem;"><a href="../">&larr; Back to home</a></p>
+<div class="wrapper">
 
-<h1>Privacy Policy</h1>
-<p class="subtitle">Don't Let YouTube Track You &mdash; Browser Extension</p>
-<p class="subtitle">Effective date: March 26, 2026</p>
+  <a href="../" class="back-link">&larr; Back to home</a>
 
-<hr>
+  <h1>Privacy Policy</h1>
+  <p class="subtitle">Don't Let YouTube Track You &mdash; Browser Extension</p>
+  <p class="subtitle">Effective date: March 26, 2026</p>
 
-<h2>Overview</h2>
-<p>
-  "Don't Let YouTube Track You" is a privacy-focused browser extension that records your
-  YouTube browsing history locally on your device. It is designed to work without a Google
-  account and without sending your data to Google. This policy explains what data the
-  extension handles, how it is stored, and what choices you have.
-</p>
+  <div class="intro-card">
+    <p>
+      <strong>TL;DR:</strong> Your browsing history is stored locally on your device.
+      Nothing leaves your machine unless you explicitly enable encrypted cross-device sync.
+      No analytics, no telemetry, no cookies &mdash; ever.
+    </p>
+  </div>
 
-<h2>Data Collected</h2>
-<p>
-  When you visit YouTube pages, the extension records the following information from the
-  pages you visit:
-</p>
-<ul>
-  <li>Page URL</li>
-  <li>Page title</li>
-  <li>Page type (video, search, channel, shorts, playlist, home)</li>
-  <li>Video ID (if applicable)</li>
-  <li>Channel name and channel ID (if applicable)</li>
-  <li>Search query (if applicable)</li>
-  <li>Thumbnail URL (constructed from the video ID)</li>
-  <li>Timestamp of the visit</li>
-  <li>Duration spent on the page</li>
-</ul>
-<p>
-  The extension also generates a random device ID (UUID) that is stored locally and used
-  to identify your device if you enable cross-device sync.
-</p>
+  <h2>Overview</h2>
+  <p>
+    "Don't Let YouTube Track You" is a privacy-focused browser extension that records your
+    YouTube browsing history locally on your device. It is designed to work without a Google
+    account and without sending your data to Google. This policy explains what data the
+    extension handles, how it is stored, and what choices you have.
+  </p>
 
-<h2>How Data Is Stored</h2>
-<p>
-  All browsing history is stored <strong>locally on your device</strong> in a SQLite database
-  using your browser's storage APIs (OPFS, IndexedDB, or in-memory storage depending on your
-  browser). No data leaves your device unless you explicitly enable cross-device sync.
-</p>
+  <h2>Data Collected</h2>
+  <p>
+    When you visit YouTube pages, the extension records the following information from the
+    pages you visit:
+  </p>
+  <ul>
+    <li>Page URL</li>
+    <li>Page title</li>
+    <li>Page type (video, search, channel, shorts, playlist, home)</li>
+    <li>Video ID (if applicable)</li>
+    <li>Channel name and channel ID (if applicable)</li>
+    <li>Search query (if applicable)</li>
+    <li>Thumbnail URL (constructed from the video ID)</li>
+    <li>Timestamp of the visit</li>
+    <li>Duration spent on the page</li>
+  </ul>
+  <p>
+    The extension also generates a random device ID (UUID) that is stored locally and used
+    to identify your device if you enable cross-device sync.
+  </p>
 
-<h2>Cross-Device Sync (Optional)</h2>
-<p>
-  If you choose to enable cross-device sync, the extension uses
-  <a href="https://supabase.com">Supabase</a> (a hosted Postgres service) to synchronize
-  your history across devices. When sync is enabled:
-</p>
-<ul>
-  <li>
-    <strong>Sensitive fields are encrypted before transmission.</strong> URLs, titles, channel
-    names, channel IDs, search queries, and thumbnail URLs are encrypted with AES-256-GCM
-    on your device before being sent to the server. The server never sees this data in
-    plaintext.
-  </li>
-  <li>
-    The encryption key is derived from your 6-character pairing code using PBKDF2
-    (100,000 iterations, SHA-256). The key and pairing code never leave your device.
-  </li>
-  <li>
-    The following fields are sent <strong>unencrypted</strong> (required for server-side
-    operations): record ID, device ID, sync group ID, page type, visit timestamp, and
-    duration.
-  </li>
-</ul>
-<p>
-  Sync is entirely optional. The extension works fully offline without it.
-</p>
+  <h2>How Data Is Stored</h2>
+  <p>
+    All browsing history is stored <strong>locally on your device</strong> in a SQLite database
+    using your browser's storage APIs (OPFS, IndexedDB, or in-memory storage depending on your
+    browser). No data leaves your device unless you explicitly enable cross-device sync.
+  </p>
 
-<h2>What We Do NOT Collect</h2>
-<ul>
-  <li>No analytics or telemetry of any kind</li>
-  <li>No personal information (name, email, account details)</li>
-  <li>No data is sold or shared with third parties</li>
-  <li>No advertising or tracking scripts</li>
-  <li>No cookies are set by the extension</li>
-</ul>
+  <h2>Cross-Device Sync (Optional)</h2>
+  <p>
+    If you choose to enable cross-device sync, the extension uses
+    <a href="https://supabase.com">Supabase</a> (a hosted Postgres service) to synchronize
+    your history across devices. When sync is enabled:
+  </p>
+  <ul>
+    <li>
+      <strong>Sensitive fields are encrypted before transmission.</strong> URLs, titles, channel
+      names, channel IDs, search queries, and thumbnail URLs are encrypted with AES-256-GCM
+      on your device before being sent to the server. The server never sees this data in
+      plaintext.
+    </li>
+    <li>
+      The encryption key is derived from your 6-character pairing code using PBKDF2
+      (100,000 iterations, SHA-256). The key and pairing code never leave your device.
+    </li>
+    <li>
+      The following fields are sent <strong>unencrypted</strong> (required for server-side
+      operations): record ID, device ID, sync group ID, page type, visit timestamp, and
+      duration.
+    </li>
+  </ul>
+  <p>
+    Sync is entirely optional. The extension works fully offline without it.
+  </p>
 
-<h2>Extension Permissions</h2>
-<p>The extension requests the following browser permissions:</p>
-<table>
-  <tr>
-    <th>Permission</th>
-    <th>Why it's needed</th>
-  </tr>
-  <tr>
-    <td><code>storage</code></td>
-    <td>Store extension configuration</td>
-  </tr>
-  <tr>
-    <td><code>unlimitedStorage</code></td>
-    <td>Allow the local history database to grow without browser quota limits</td>
-  </tr>
-  <tr>
-    <td><code>tabs</code></td>
-    <td>Open YouTube links when you click history items</td>
-  </tr>
-  <tr>
-    <td><code>offscreen</code></td>
-    <td>Chrome only: host the SQLite database worker</td>
-  </tr>
-  <tr>
-    <td><code>*://*.youtube.com/*</code></td>
-    <td>Content script runs on YouTube to detect page navigation</td>
-  </tr>
-  <tr>
-    <td><code>https://*.supabase.co/*</code></td>
-    <td>Connect to the sync backend (only used when sync is enabled)</td>
-  </tr>
-</table>
+  <h2>What We Do NOT Collect</h2>
+  <ul>
+    <li>No analytics or telemetry of any kind</li>
+    <li>No personal information (name, email, account details)</li>
+    <li>No data is sold or shared with third parties</li>
+    <li>No advertising or tracking scripts</li>
+    <li>No cookies are set by the extension</li>
+  </ul>
 
-<h2>Data Retention and Deletion</h2>
-<ul>
-  <li>
-    The extension automatically deletes history entries older than your configured retention
-    period (default: 90 days).
-  </li>
-  <li>
-    You can clear all local history at any time from the extension's Settings tab.
-  </li>
-  <li>
-    You can export your history as JSON or CSV before deleting it.
-  </li>
-  <li>
-    Uninstalling the extension removes all locally stored data.
-  </li>
-  <li>
-    If you used cross-device sync, leaving a sync group removes your device's association.
-    Encrypted data may remain on the server until the sync group is empty or the data
-    expires.
-  </li>
-</ul>
+  <h2>Extension Permissions</h2>
+  <p>The extension requests the following browser permissions:</p>
+  <table>
+    <tr>
+      <th>Permission</th>
+      <th>Why it's needed</th>
+    </tr>
+    <tr>
+      <td><code>storage</code></td>
+      <td>Store extension configuration</td>
+    </tr>
+    <tr>
+      <td><code>unlimitedStorage</code></td>
+      <td>Allow the local history database to grow without browser quota limits</td>
+    </tr>
+    <tr>
+      <td><code>tabs</code></td>
+      <td>Open YouTube links when you click history items</td>
+    </tr>
+    <tr>
+      <td><code>offscreen</code></td>
+      <td>Chrome only: host the SQLite database worker</td>
+    </tr>
+    <tr>
+      <td><code>*://*.youtube.com/*</code></td>
+      <td>Content script runs on YouTube to detect page navigation</td>
+    </tr>
+    <tr>
+      <td><code>https://*.supabase.co/*</code></td>
+      <td>Connect to the sync backend (only used when sync is enabled)</td>
+    </tr>
+  </table>
 
-<h2>Third-Party Services</h2>
-<table>
-  <tr>
-    <th>Service</th>
-    <th>Purpose</th>
-    <th>When used</th>
-  </tr>
-  <tr>
-    <td><a href="https://supabase.com">Supabase</a></td>
-    <td>Cross-device sync backend</td>
-    <td>Only when you enable sync</td>
-  </tr>
-  <tr>
-    <td>YouTube thumbnail CDN (<code>i.ytimg.com</code>)</td>
-    <td>Display video thumbnails in the popup</td>
-    <td>When viewing your history</td>
-  </tr>
-</table>
-<p>
-  No other third-party services, APIs, or SDKs are used.
-</p>
+  <h2>Data Retention and Deletion</h2>
+  <ul>
+    <li>
+      The extension automatically deletes history entries older than your configured retention
+      period (default: 90 days).
+    </li>
+    <li>
+      You can clear all local history at any time from the extension's Settings tab.
+    </li>
+    <li>
+      You can export your history as JSON or CSV before deleting it.
+    </li>
+    <li>
+      Uninstalling the extension removes all locally stored data.
+    </li>
+    <li>
+      If you used cross-device sync, leaving a sync group removes your device's association.
+      Encrypted data may remain on the server until the sync group is empty or the data
+      expires.
+    </li>
+  </ul>
 
-<h2>Children's Privacy</h2>
-<p>
-  This extension is not directed at children under 13. It does not knowingly collect
-  information from children.
-</p>
+  <h2>Third-Party Services</h2>
+  <table>
+    <tr>
+      <th>Service</th>
+      <th>Purpose</th>
+      <th>When used</th>
+    </tr>
+    <tr>
+      <td><a href="https://supabase.com">Supabase</a></td>
+      <td>Cross-device sync backend</td>
+      <td>Only when you enable sync</td>
+    </tr>
+    <tr>
+      <td>YouTube thumbnail CDN (<code>i.ytimg.com</code>)</td>
+      <td>Display video thumbnails in the popup</td>
+      <td>When viewing your history</td>
+    </tr>
+  </table>
+  <p>
+    No other third-party services, APIs, or SDKs are used.
+  </p>
 
-<h2>Changes to This Policy</h2>
-<p>
-  If this policy is updated, the changes will be posted on this page with an updated
-  effective date. Significant changes will be noted in the extension's release notes.
-</p>
+  <h2>Children's Privacy</h2>
+  <p>
+    This extension is not directed at children under 13. It does not knowingly collect
+    information from children.
+  </p>
 
-<h2>Contact</h2>
-<p>
-  If you have questions or concerns about this privacy policy, please
-  <a href="https://github.com/lynicis/dont-let-youtube-track-you/issues">open an issue</a>
-  on the GitHub repository.
-</p>
+  <h2>Changes to This Policy</h2>
+  <p>
+    If this policy is updated, the changes will be posted on this page with an updated
+    effective date. Significant changes will be noted in the extension's release notes.
+  </p>
 
-<hr>
-<p class="subtitle">
-  &copy; 2026 Emre Sirmali.
-  <a href="https://github.com/lynicis/dont-let-youtube-track-you">Source code</a> is
-  available under the MIT License.
-</p>
+  <h2>Contact</h2>
+  <p>
+    If you have questions or concerns about this privacy policy, please
+    <a href="https://github.com/lynicis/dont-let-youtube-track-you/issues">open an issue</a>
+    on the GitHub repository.
+  </p>
+
+  <div class="footer-note">
+    &copy; 2026 Emre Sirmali &middot;
+    <a href="https://github.com/lynicis/dont-let-youtube-track-you">Source code</a>
+    available under the MIT License.
+  </div>
+
+</div>
 
 </body>
 </html>
