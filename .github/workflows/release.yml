@@ -11,7 +11,7 @@ jobs:
   Build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: oven-sh/setup-bun@v2
 
@@ -38,39 +38,30 @@ jobs:
       - name: Build and zip Firefox extension
         run: bun run zip:firefox
 
-      - name: Build and zip Edge extension
-        run: bun run zip:edge
-
       - name: Upload Chrome zip
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: chrome-zip
           path: .output/${{ env.PROJECT_NAME }}-${{ env.VERSION }}-chrome.zip
 
       - name: Upload Firefox zip
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: firefox-zip
           path: .output/${{ env.PROJECT_NAME }}-${{ env.VERSION }}-firefox.zip
 
       - name: Upload Firefox sources zip
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: firefox-sources-zip
           path: .output/${{ env.PROJECT_NAME }}-${{ env.VERSION }}-sources.zip
-
-      - name: Upload Edge zip
-        uses: actions/upload-artifact@v4
-        with:
-          name: edge-zip
-          path: .output/${{ env.PROJECT_NAME }}-${{ env.VERSION }}-edge.zip
 
   Chrome:
     needs: Build
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: chrome-zip
 
@@ -87,11 +78,11 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: firefox-zip
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: firefox-sources-zip
 
@@ -110,42 +101,20 @@ jobs:
           WEB_EXT_API_KEY: ${{ secrets.WEB_EXT_API_KEY }}
           WEB_EXT_API_SECRET: ${{ secrets.WEB_EXT_API_SECRET }}
 
-  Edge:
-    needs: Build
-    runs-on: ubuntu-latest
-    continue-on-error: true
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          name: edge-zip
-
-      - name: Submit to Edge Add-ons
-        uses: wdzeng/edge-addon@v2
-        with:
-          product-id: ${{ secrets.EDGE_PRODUCT_ID }}
-          zip-path: "*-edge.zip"
-          api-key: ${{ secrets.EDGE_API_KEY }}
-          client-id: ${{ secrets.EDGE_CLIENT_ID }}
-
   Attach-Assets:
     needs: Build
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: chrome-zip
           path: artifacts
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: firefox-zip
-          path: artifacts
-
-      - uses: actions/download-artifact@v4
-        with:
-          name: edge-zip
           path: artifacts
 
       - name: Upload zips to GitHub Release
