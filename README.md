@@ -2,7 +2,6 @@
 
 [![Chrome Web Store](https://img.shields.io/chrome-web-store/v/ngiaafdkahpbemoanahembmikonnngmp?logo=googlechrome&logoColor=white&label=Chrome%20Web%20Store)](https://chromewebstore.google.com/detail/dont-let-youtube-track-yo/ngiaafdkahpbemoanahembmikonnngmp)
 [![Firefox Add-ons](https://img.shields.io/amo/v/don-t-let-youtube-track-you?logo=firefox&logoColor=white&label=Firefox%20Add-ons)](https://addons.mozilla.org/en-US/firefox/addon/don-t-let-youtube-track-you/)
-[![Edge Add-ons](https://img.shields.io/badge/Edge%20Add--ons-v1.0.0-blue?logo=microsoftedge&logoColor=white)](https://microsoftedge.microsoft.com/addons/detail/dont-let-youtube-trackyou/4fe77257-12c8-4381-8fbc-6a60c8e93397)
 
 **[Website](https://lynicis.github.io/dont-let-youtube-track-you/)** | **[Privacy Policy](https://lynicis.github.io/dont-let-youtube-track-you/privacy/)**
 
@@ -40,7 +39,7 @@ bun run build:firefox
 
 ## Installation
 
-### Chromium-based browsers (Chrome, Edge, Brave, Arc, Opera, Vivaldi)
+### Chromium-based browsers (Chrome, Brave, Arc, Opera, Vivaldi)
 
 1. Build the extension:
    ```bash
@@ -49,7 +48,6 @@ bun run build:firefox
 
 2. Open your browser and navigate to the extensions page:
    - **Chrome**: `chrome://extensions`
-   - **Edge**: `edge://extensions`
    - **Brave**: `brave://extensions`
    - **Opera**: `opera://extensions`
    - **Vivaldi**: `vivaldi://extensions`
