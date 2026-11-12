@@ -9,6 +9,9 @@
 import * as db from '../db/client';
 import { isSupabaseConfigured } from './supabase-client';
 
+/** Bump when the remote schema changes; triggers one Edge Function call per device. */
+const REMOTE_SCHEMA_VERSION = '2';
+
 /**
  * Derive the Edge Functions base URL from the Supabase project URL.
  * e.g. "https://abc.supabase.co" → "https://abc.supabase.co/functions/v1"
@@ -33,9 +36,9 @@ export async function ensureRemoteSchema(): Promise<void> {
     return;
   }
 
-  // Check if we already ran the migration from this device
-  const applied = await db.getConfig('remote_schema_applied');
-  if (applied === 'true') {
+  // Check if this device already applied this remote schema version
+  const version = await db.getConfig('remote_schema_version');
+  if (version === REMOTE_SCHEMA_VERSION) {
     return;
   }
 
@@ -63,7 +66,7 @@ export async function ensureRemoteSchema(): Promise<void> {
     const result = await response.json();
     if (result.ok) {
       console.log('[migrations] Remote schema applied successfully');
-      await db.setConfig('remote_schema_applied', 'true');
+      await db.setConfig('remote_schema_version', REMOTE_SCHEMA_VERSION);
     } else {
       console.warn('[migrations] Edge Function reported error:', result.error);
     }

@@ -18,6 +18,9 @@ import { FREE_DEVICE_LIMIT } from '../licensing/types';
 const CODE_CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 const CODE_LENGTH = 6;
 
+/** Result shape returned by the security-definer group RPCs. */
+type GroupRpcResult = { ok: boolean; error?: string; group_id?: string };
+
 /**
  * Generate a random 6-character alphanumeric pairing code.
  * Uses `crypto.getRandomValues` for secure randomness.
@@ -80,43 +83,47 @@ export async function createSyncGroup(): Promise<{
   pairingCode: string;
   deviceId: string;
 }> {
-  // Ensure remote Supabase tables exist before inserting rows
+  // Ensure remote Supabase tables and RPCs exist before creating rows
   await ensureRemoteSchema();
 
   const supabase = getSupabaseClient();
-  const pairingCode = generatePairingCode();
   const deviceId = await getOrCreateDeviceId();
   const deviceName = getDeviceName();
 
-  // Create the sync group
-  const { data: group, error: groupError } = await supabase
-    .from('sync_groups')
-    .insert({ pairing_code: pairingCode })
-    .select('id')
-    .single();
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const pairingCode = generatePairingCode();
 
-  if (groupError || !group) {
-    throw new Error(`Failed to create sync group: ${groupError?.message ?? 'no data returned'}`);
+    const { data, error } = await supabase.rpc('create_sync_group', {
+      p_code: pairingCode,
+      p_device_id: deviceId,
+      p_device_name: deviceName,
+    });
+
+    if (error) {
+      throw new Error(`Failed to create sync group: ${error.message}`);
+    }
+
+    const result = data as GroupRpcResult | null;
+    if (result?.ok && result.group_id) {
+      const groupId = result.group_id;
+
+      // New group → start pulling from the beginning.
+      await Promise.all([
+        db.setConfig('group_id', groupId),
+        db.setConfig('pairing_code', pairingCode),
+        db.setConfig('last_pull_at', ''),
+        db.setConfig('last_pull_id', ''),
+      ]);
+
+      return { groupId, pairingCode, deviceId };
+    }
+
+    if (result?.error !== 'code_taken') {
+      throw new Error(`Failed to create sync group: ${result?.error ?? 'unknown error'}`);
+    }
   }
 
-  const groupId: string = group.id;
-
-  // Register this device in the group
-  const { error: deviceError } = await supabase.from('devices').insert({
-    id: deviceId,
-    group_id: groupId,
-    device_name: deviceName,
-  });
-
-  if (deviceError) {
-    throw new Error(`Failed to register device: ${deviceError.message}`);
-  }
-
-  // Persist locally
-  await db.setConfig('group_id', groupId);
-  await db.setConfig('pairing_code', pairingCode);
-
-  return { groupId, pairingCode, deviceId };
+  throw new Error('Failed to create sync group: could not allocate a unique code.');
 }
 
 /**
@@ -131,76 +138,59 @@ export async function joinSyncGroup(code: string): Promise<{
   groupId: string;
   deviceId: string;
 }> {
-  // Ensure remote Supabase tables exist before querying
+  // Ensure remote Supabase tables and RPCs exist before querying
   await ensureRemoteSchema();
 
   const supabase = getSupabaseClient();
   const normalizedCode = code.trim().toUpperCase();
   const deviceId = await getOrCreateDeviceId();
   const deviceName = getDeviceName();
+  const license = await getLicenseState();
 
-  // Look up the group
-  const { data: group, error: lookupError } = await supabase
-    .from('sync_groups')
-    .select('id')
-    .eq('pairing_code', normalizedCode)
-    .single();
-
-  if (lookupError || !group) {
-    throw new Error('Sync group not found. Check the pairing code and try again.');
-  }
-
-  const groupId: string = group.id;
-
-  // Check device count against free tier limit
-  const { data: existingDevices } = await supabase
-    .from('devices')
-    .select('id')
-    .eq('group_id', groupId);
-
-  const currentCount = existingDevices?.length ?? 0;
-
-  if (currentCount >= FREE_DEVICE_LIMIT) {
-    const license = await getLicenseState();
-    if (license.status !== 'active') {
-      throw new Error(
-        `Free plan supports up to ${FREE_DEVICE_LIMIT} devices. Upgrade to Pro Sync to add more.`,
-      );
-    }
-  }
-
-  // Register this device
-  const { error: deviceError } = await supabase.from('devices').insert({
-    id: deviceId,
-    group_id: groupId,
-    device_name: deviceName,
+  const { data, error } = await supabase.rpc('join_sync_group', {
+    p_code: normalizedCode,
+    p_device_id: deviceId,
+    p_device_name: deviceName,
+    p_has_license: license.status === 'active',
   });
 
-  if (deviceError) {
-    throw new Error(`Failed to register device: ${deviceError.message}`);
+  if (error) {
+    throw new Error(`Failed to join sync group: ${error.message}`);
   }
 
-  // Persist locally
-  await db.setConfig('group_id', groupId);
-  await db.setConfig('pairing_code', normalizedCode);
+  const result = data as GroupRpcResult | null;
+  if (result?.ok && result.group_id) {
+    const groupId = result.group_id;
 
-  return { groupId, deviceId };
+    // New group → start pulling from the beginning.
+    await Promise.all([
+      db.setConfig('group_id', groupId),
+      db.setConfig('pairing_code', normalizedCode),
+      db.setConfig('last_pull_at', ''),
+      db.setConfig('last_pull_id', ''),
+    ]);
+
+    return { groupId, deviceId };
+  }
+
+  if (result?.error === 'not_found') {
+    throw new Error('Sync group not found. Check the pairing code and try again.');
+  }
+  if (result?.error === 'device_limit') {
+    throw new Error(
+      `Free plan supports up to ${FREE_DEVICE_LIMIT} devices. Upgrade to Pro Sync to add more.`,
+    );
+  }
+  throw new Error(`Failed to join sync group: ${result?.error ?? 'unknown error'}`);
 }
 
 /**
  * Leave the current sync group.
  *
- * Removes this device from Supabase and clears local pairing config.
+ * Keeps the remote device row and its history (other devices keep seeing
+ * their own history) and clears local pairing config and pull cursors.
  */
 export async function leaveSyncGroup(): Promise<void> {
-  const supabase = getSupabaseClient();
-  const deviceId = await db.getConfig('device_id');
-  const groupId = await db.getConfig('group_id');
-
-  if (deviceId && groupId) {
-    await supabase.from('devices').delete().eq('id', deviceId).eq('group_id', groupId);
-  }
-
   // Deactivate license if active (frees the activation slot)
   try {
     await deactivateKey();
@@ -208,9 +198,13 @@ export async function leaveSyncGroup(): Promise<void> {
     console.error('[pairing] license deactivation on leave failed:', err);
   }
 
-  // Clear local pairing state
-  await db.setConfig('group_id', '');
-  await db.setConfig('pairing_code', '');
+  // Clear local pairing state; the next group starts from the beginning.
+  await Promise.all([
+    db.setConfig('group_id', ''),
+    db.setConfig('pairing_code', ''),
+    db.setConfig('last_pull_at', ''),
+    db.setConfig('last_pull_id', ''),
+  ]);
 }
 
 /**

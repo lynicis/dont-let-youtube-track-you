@@ -41,6 +41,7 @@ export type DbOperation =
   | 'getAllHistory'
   | 'getHistoryCount'
   | 'searchHistory'
+  | 'clearHistory'
   | 'getPersistenceMode';
 
 /** A request message sent to the DB worker/offscreen document. */
@@ -90,7 +91,8 @@ export interface InsertSyncedEntriesParams {
 }
 
 export interface UpdateDurationParams {
-  id: string;
+  url: string;
+  visitedAt: number;
   durationSeconds: number;
 }
 

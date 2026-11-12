@@ -2,8 +2,8 @@
  * Handles page-visit and update-duration messages from the content script.
  *
  * Converts PageVisit payloads into BrowsingHistoryInput records and
- * persists them via the DB client. Maintains a bounded in-memory
- * URL -> DB ID mapping so duration updates can target the correct row.
+ * persists them via the DB client. Duration updates target the row by
+ * (url, visited_at), so they survive service-worker suspension.
  */
 
 import { v4 as uuidv4 } from 'uuid';
@@ -11,49 +11,31 @@ import type { PageVisit } from '../tracker/types';
 import type { BrowsingHistoryInput } from '../db/types';
 import * as db from '../db/client';
 
-const MAX_URL_MAP_SIZE = 100;
+/** Single-flight device ID resolution: concurrent callers share one lookup. */
+let deviceIdPromise: Promise<string> | null = null;
 
-/**
- * Map of URL -> most recently inserted DB ID.
- * Used by handleUpdateDuration to look up the record to update.
- */
-const urlToIdMap = new Map<string, string>();
-
-/** Device ID is cached after first resolution to avoid repeated DB lookups. */
-let cachedDeviceId: string | null = null;
+function loadOrCreateDeviceId(): Promise<string> {
+  return (async () => {
+    const existing = await db.getConfig('device_id');
+    if (existing) return existing;
+    const newId = uuidv4();
+    await db.setConfig('device_id', newId);
+    return newId;
+  })();
+}
 
 /**
  * Get the device ID from config, generating and persisting one if it
  * doesn't exist yet.
  */
-export async function getOrCreateDeviceId(): Promise<string> {
-  if (cachedDeviceId) return cachedDeviceId;
-
-  const existing = await db.getConfig('device_id');
-  if (existing) {
-    cachedDeviceId = existing;
-    return existing;
+export function getOrCreateDeviceId(): Promise<string> {
+  if (!deviceIdPromise) {
+    deviceIdPromise = loadOrCreateDeviceId().catch((err) => {
+      deviceIdPromise = null;
+      throw err;
+    });
   }
-
-  const newId = uuidv4();
-  await db.setConfig('device_id', newId);
-  cachedDeviceId = newId;
-  return newId;
-}
-
-/**
- * Add an entry to the URL -> ID map, evicting the oldest entry when the
- * map exceeds MAX_URL_MAP_SIZE.
- */
-function trackUrl(url: string, id: string): void {
-  // If the map is at capacity, delete the oldest entry (first key).
-  if (urlToIdMap.size >= MAX_URL_MAP_SIZE && !urlToIdMap.has(url)) {
-    const oldest = urlToIdMap.keys().next().value;
-    if (oldest !== undefined) {
-      urlToIdMap.delete(oldest);
-    }
-  }
-  urlToIdMap.set(url, id);
+  return deviceIdPromise;
 }
 
 /**
@@ -81,22 +63,18 @@ export async function handlePageVisit(visit: PageVisit): Promise<string> {
   };
 
   await db.insertHistory(entry);
-  trackUrl(visit.url, id);
 
   return id;
 }
 
 /**
- * Update the duration for the most recently recorded visit matching the
- * given URL. Silently no-ops if the URL is not found in the map (e.g. the
- * entry was evicted or the background was restarted).
+ * Update the duration for the visit matching url + visited_at.
+ * A missing row updates zero rows; no error.
  */
 export async function handleUpdateDuration(data: {
   url: string;
+  visitedAt: number;
   durationSeconds: number;
 }): Promise<void> {
-  const id = urlToIdMap.get(data.url);
-  if (!id) return;
-
-  await db.updateDuration(id, data.durationSeconds);
+  await db.updateDuration(data.url, data.visitedAt, data.durationSeconds);
 }

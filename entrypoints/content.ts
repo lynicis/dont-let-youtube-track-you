@@ -6,7 +6,6 @@ export default defineContentScript({
 
   main(ctx) {
     let currentVisit: PageVisit | null = null;
-    let entryTimestamp: number | null = null;
     let lastNavigatedUrl: string | null = null;
     let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -16,16 +15,16 @@ export default defineContentScript({
      * Send the duration update for the current visit before navigating away.
      */
     function finalizePreviousVisit(): void {
-      if (currentVisit && entryTimestamp !== null) {
-        const durationSeconds = Math.round((Date.now() - entryTimestamp) / 1000);
-        browser.runtime.sendMessage({
-          type: 'update-duration',
-          data: {
-            url: currentVisit.url,
-            durationSeconds,
-          },
-        });
-      }
+      if (!currentVisit) return;
+      const durationSeconds = Math.round((Date.now() - currentVisit.visitedAt) / 1000);
+      browser.runtime.sendMessage({
+        type: 'update-duration',
+        data: {
+          url: currentVisit.url,
+          visitedAt: currentVisit.visitedAt,
+          durationSeconds,
+        },
+      });
     }
 
     /**
@@ -63,7 +62,6 @@ export default defineContentScript({
       // Build and record the new visit
       const visit = buildPageVisit(url);
       currentVisit = visit;
-      entryTimestamp = visit.visitedAt;
 
       browser.runtime.sendMessage({
         type: 'page-visit',

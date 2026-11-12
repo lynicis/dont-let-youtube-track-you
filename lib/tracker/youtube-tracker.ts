@@ -82,7 +82,7 @@ export function extractChannelInfo(): {
   const href = channelLink?.getAttribute('href');
   if (href) {
     const match = href.match(/\/channel\/(UC[\w-]+)/);
-    if (match) {
+    if (match?.[1]) {
       id = match[1];
     }
   }
@@ -95,7 +95,7 @@ export function extractChannelInfo(): {
     const canonical = canonicalLink?.href;
     if (canonical) {
       const match = canonical.match(/\/channel\/(UC[\w-]+)/);
-      if (match) {
+      if (match?.[1]) {
         id = match[1];
       }
     }

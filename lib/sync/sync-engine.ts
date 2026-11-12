@@ -6,8 +6,10 @@
  * fields are encrypted with AES-256-GCM before leaving the device.
  */
 
+import { browser } from 'wxt/browser';
 import { getSupabaseClient, isSupabaseConfigured } from './supabase-client';
 import { getSyncStatus } from './pairing';
+import { pullCursorFilter, nextPullCursor } from './pull-cursor';
 import { encryptEntry, decryptEntry } from '../crypto/encrypt';
 import { deriveKey } from '../crypto/key-derivation';
 import * as db from '../db/client';
@@ -23,12 +25,6 @@ const PUSH_BATCH_SIZE = 50;
 
 /** Maximum entries to pull in a single request. */
 const PULL_LIMIT = 200;
-
-/** Push interval in milliseconds (30 seconds). */
-const PUSH_INTERVAL_MS = 30_000;
-
-/** Pull interval in milliseconds (60 seconds). */
-const PULL_INTERVAL_MS = 60_000;
 
 // ---------------------------------------------------------------------------
 // Timestamp helpers
@@ -167,7 +163,7 @@ export async function pullFromSupabase(): Promise<{ pulled: number; errors: numb
 
     // Determine the starting point for this pull
     const lastPullAt = await db.getConfig('last_pull_at');
-    const since = lastPullAt ?? new Date(0).toISOString();
+    const lastPullId = await db.getConfig('last_pull_id');
 
     const supabase = getSupabaseClient();
 
@@ -176,8 +172,9 @@ export async function pullFromSupabase(): Promise<{ pulled: number; errors: numb
       .select('*')
       .eq('group_id', status.groupId)
       .neq('device_id', deviceId)
-      .gt('created_at', since)
+      .or(pullCursorFilter(lastPullAt || null, lastPullId || null))
       .order('created_at', { ascending: true })
+      .order('id', { ascending: true })
       .limit(PULL_LIMIT);
 
     if (error) {
@@ -245,10 +242,13 @@ export async function pullFromSupabase(): Promise<{ pulled: number; errors: numb
       await db.insertSyncedEntries(entriesToInsert);
     }
 
-    // Update last_pull_at to the created_at of the last row we received
-    const lastRow = rows[rows.length - 1];
-    if (lastRow?.created_at) {
-      await db.setConfig('last_pull_at', lastRow.created_at as string);
+    // Advance the keyset cursor to the last row of this page
+    const cursor = nextPullCursor(rows as Array<{ id: string; created_at: string }>);
+    if (cursor) {
+      await Promise.all([
+        db.setConfig('last_pull_at', cursor.at),
+        db.setConfig('last_pull_id', cursor.id),
+      ]);
     }
 
     if (pulled > 0) {
@@ -266,35 +266,79 @@ export async function pullFromSupabase(): Promise<{ pulled: number; errors: numb
 }
 
 // ---------------------------------------------------------------------------
+// Remote clear
+// ---------------------------------------------------------------------------
+
+type ClearRpcResult = { ok: boolean; error?: string; deleted?: number };
+
+/**
+ * Delete this device's uploaded rows after proving knowledge of the pairing
+ * code. Returns the number deleted; 0 when not paired or Supabase is unset.
+ */
+export async function clearRemoteHistoryForDevice(): Promise<number> {
+  const [groupId, pairingCode, deviceId] = await Promise.all([
+    db.getConfig('group_id'),
+    db.getConfig('pairing_code'),
+    db.getConfig('device_id'),
+  ]);
+  if (!groupId || !pairingCode || !deviceId) return 0;
+  if (!isSupabaseConfigured()) return 0;
+
+  const { data, error } = await getSupabaseClient().rpc('clear_device_history', {
+    p_code: pairingCode,
+    p_device_id: deviceId,
+  });
+  if (error) throw new Error(`Failed to clear remote history: ${error.message}`);
+
+  const result = data as ClearRpcResult;
+  if (!result?.ok) {
+    throw new Error(
+      result?.error === 'not_found'
+        ? 'Sync group not found on the server; remote history was not cleared.'
+        : `Failed to clear remote history: ${result?.error ?? 'unknown error'}`,
+    );
+  }
+  return result.deleted ?? 0;
+}
+
+// ---------------------------------------------------------------------------
 // Sync loop
 // ---------------------------------------------------------------------------
+
+const SYNC_ALARM = 'dlpty-sync';
+let syncLoopStarted = false;
 
 /**
  * Start the background sync loop.
  *
- * Runs an initial push+pull immediately, then sets up recurring
- * intervals (push every 30 s, pull every 60 s).
+ * Runs an initial push+pull immediately, then every minute via an alarm
+ * (service workers are suspended, so setInterval does not survive).
  *
- * @returns A cleanup function that clears both intervals.
+ * @returns A cleanup function that removes the alarm listener.
  */
 export function startSyncLoop(): () => void {
+  if (syncLoopStarted) return () => {};
+  syncLoopStarted = true;
+
   console.log('[Sync] Starting sync loop');
 
   // Initial sync (fire-and-forget — errors are logged internally)
-  pushToSupabase().catch(() => {});
-  pullFromSupabase().catch(() => {});
+  void pushToSupabase();
+  void pullFromSupabase();
 
-  const pushInterval = setInterval(() => {
-    pushToSupabase().catch(() => {});
-  }, PUSH_INTERVAL_MS);
+  browser.alarms.create(SYNC_ALARM, { periodInMinutes: 1 });
 
-  const pullInterval = setInterval(() => {
-    pullFromSupabase().catch(() => {});
-  }, PULL_INTERVAL_MS);
+  const listener = (alarm: { name: string }) => {
+    if (alarm.name !== SYNC_ALARM) return;
+    void pushToSupabase();
+    void pullFromSupabase();
+  };
+  browser.alarms.onAlarm.addListener(listener);
 
   return () => {
     console.log('[Sync] Stopping sync loop');
-    clearInterval(pushInterval);
-    clearInterval(pullInterval);
+    syncLoopStarted = false;
+    browser.alarms.onAlarm.removeListener(listener);
+    void browser.alarms.clear(SYNC_ALARM);
   };
 }

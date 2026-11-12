@@ -49,7 +49,8 @@ const HISTORY_COLUMNS: (keyof BrowsingHistoryEntry)[] = [
 function rowToEntry(row: unknown[]): BrowsingHistoryEntry {
   const entry: Record<string, unknown> = {};
   for (let i = 0; i < HISTORY_COLUMNS.length; i++) {
-    entry[HISTORY_COLUMNS[i]] = row[i] ?? null;
+    const column = HISTORY_COLUMNS[i];
+    if (column) entry[column] = row[i] ?? null;
   }
   return entry as unknown as BrowsingHistoryEntry;
 }
@@ -113,7 +114,8 @@ async function markSynced(params: MarkSyncedParams): Promise<void> {
   );
 }
 
-async function insertSyncedEntries(params: InsertSyncedEntriesParams): Promise<void> {
+async function insertSyncedEntries(params: InsertSyncedEntriesParams): Promise<number> {
+  let inserted = 0;
   for (const e of params.entries) {
     const sql = `INSERT OR IGNORE INTO browsing_history
       (id, url, page_type, title, video_id, channel_name, channel_id,
@@ -126,13 +128,21 @@ async function insertSyncedEntries(params: InsertSyncedEntriesParams): Promise<v
         ${sqlValue(e.synced_at)}
       );`;
     await execQuery(sql);
+    inserted += sqlite3.changes(db);
   }
+  return inserted;
 }
 
 async function updateDuration(params: UpdateDurationParams): Promise<void> {
   await execQuery(
-    `UPDATE browsing_history SET duration_seconds = ${params.durationSeconds} WHERE id = ${sqlValue(params.id)};`
+    `UPDATE browsing_history SET duration_seconds = ${params.durationSeconds}
+     WHERE url = ${sqlValue(params.url)} AND visited_at = ${params.visitedAt};`
   );
+}
+
+async function clearHistory(): Promise<number> {
+  await execQuery('DELETE FROM browsing_history;');
+  return sqlite3.changes(db);
 }
 
 async function getConfig(params: GetConfigParams): Promise<string | null> {
@@ -192,11 +202,12 @@ async function handleOperation(operation: string, params: unknown): Promise<unkn
       await markSynced(params as MarkSyncedParams);
       return null;
     case 'insertSyncedEntries':
-      await insertSyncedEntries(params as InsertSyncedEntriesParams);
-      return null;
+      return insertSyncedEntries(params as InsertSyncedEntriesParams);
     case 'updateDuration':
       await updateDuration(params as UpdateDurationParams);
       return null;
+    case 'clearHistory':
+      return clearHistory();
     case 'getConfig':
       return getConfig(params as GetConfigParams);
     case 'setConfig':

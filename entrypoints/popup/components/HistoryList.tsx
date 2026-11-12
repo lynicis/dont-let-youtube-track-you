@@ -13,11 +13,11 @@ function groupByTime(entries: BrowsingHistoryEntry[]): TimeGroup[] {
   const yesterdayStart = todayStart - 86_400_000;
   const weekStart = todayStart - 6 * 86_400_000;
 
-  const groups: Record<string, BrowsingHistoryEntry[]> = {
-    Today: [],
-    Yesterday: [],
-    'This Week': [],
-    Older: [],
+  const groups = {
+    Today: [] as BrowsingHistoryEntry[],
+    Yesterday: [] as BrowsingHistoryEntry[],
+    'This Week': [] as BrowsingHistoryEntry[],
+    Older: [] as BrowsingHistoryEntry[],
   };
 
   for (const entry of entries) {
@@ -34,9 +34,12 @@ function groupByTime(entries: BrowsingHistoryEntry[]): TimeGroup[] {
   }
 
   // Only return non-empty groups, in order
-  return ['Today', 'Yesterday', 'This Week', 'Older']
-    .filter((label) => groups[label].length > 0)
-    .map((label) => ({ label, entries: groups[label] }));
+  return [
+    { label: 'Today', entries: groups.Today },
+    { label: 'Yesterday', entries: groups.Yesterday },
+    { label: 'This Week', entries: groups['This Week'] },
+    { label: 'Older', entries: groups.Older },
+  ].filter((group) => group.entries.length > 0);
 }
 
 export function HistoryList() {

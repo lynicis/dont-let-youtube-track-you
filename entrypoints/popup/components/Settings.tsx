@@ -109,7 +109,7 @@ export function Settings() {
     try {
       await sendMessage('clear-history');
       setConfirmClear(false);
-      setImportResult('All history cleared');
+      setImportResult('All history cleared on this device');
     } catch (err) {
       setError(`Clear failed: ${err}`);
     }
@@ -211,8 +211,9 @@ export function Settings() {
         ) : (
           <div className="settings__confirm">
             <p className="settings__hint">
-              This will permanently delete all your browsing history. Are you
-              sure?
+              This permanently deletes all history on this device and this
+              device's synced entries. Other devices in your group keep their
+              own history.
             </p>
             <div className="settings__btn-row">
               <button

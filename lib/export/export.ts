@@ -4,6 +4,7 @@
 
 import { getAllHistory } from '@/lib/db/client';
 import type { BrowsingHistoryEntry } from '@/lib/db/types';
+import { escapeCsvField } from './csv';
 
 /** Export all history as pretty-printed JSON. */
 export async function exportAsJson(): Promise<string> {
@@ -22,17 +23,6 @@ const CSV_HEADERS = [
   'visited_at',
   'duration_seconds',
 ] as const;
-
-/** Escape a value for inclusion in a CSV field (RFC 4180). */
-function escapeCsvField(value: string | number | null | undefined): string {
-  if (value == null) return '';
-  const str = String(value);
-  // If the field contains a comma, double-quote, or newline, wrap in quotes
-  if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
-    return `"${str.replace(/"/g, '""')}"`;
-  }
-  return str;
-}
 
 /** Convert a unix-ms timestamp to an ISO date string. */
 function msToIso(ms: number): string {

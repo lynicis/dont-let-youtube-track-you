@@ -4,7 +4,7 @@ import {
   getOrCreateDeviceId,
 } from '@/lib/background/history-handler';
 import * as db from '@/lib/db/client';
-import { startSyncLoop, pullFromSupabase, pushToSupabase } from '@/lib/sync/sync-engine';
+import { startSyncLoop, pullFromSupabase, pushToSupabase, clearRemoteHistoryForDevice } from '@/lib/sync/sync-engine';
 import {
   getSyncStatus,
   createSyncGroup,
@@ -214,7 +214,8 @@ export default defineBackground(() => {
       }
 
       case 'clear-history': {
-        db.deleteOldEntries(0)
+        clearRemoteHistoryForDevice()
+          .then(() => db.clearHistory())
           .then(() => sendResponse({ ok: true }))
           .catch((err) => {
             console.error('[background] clear-history error:', err);
@@ -245,9 +246,10 @@ export default defineBackground(() => {
       }
 
       case 'get-persistence-mode': {
-        const mode = db.getPersistenceMode();
-        sendResponse({ ok: true, data: mode });
-        return; // synchronous response
+        db.waitForReady()
+          .then(() => sendResponse({ ok: true, data: db.getPersistenceMode() }))
+          .catch((err) => sendResponse({ ok: false, error: String(err) }));
+        return true;
       }
 
       // -- License messages --

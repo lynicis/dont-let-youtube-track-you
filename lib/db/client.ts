@@ -455,14 +455,23 @@ export async function markSynced(ids: string[], timestamp: number): Promise<void
   await sendDbRequest('markSynced', { ids, timestamp });
 }
 
-/** Insert entries from other devices, skipping duplicates. */
-export async function insertSyncedEntries(entries: BrowsingHistoryInput[]): Promise<void> {
-  await sendDbRequest('insertSyncedEntries', { entries });
+/** Insert entries from other devices, skipping duplicates. Returns the number inserted. */
+export async function insertSyncedEntries(entries: BrowsingHistoryInput[]): Promise<number> {
+  return (await sendDbRequest('insertSyncedEntries', { entries })) as number;
 }
 
-/** Update the duration for a history entry. */
-export async function updateDuration(id: string, durationSeconds: number): Promise<void> {
-  await sendDbRequest('updateDuration', { id, durationSeconds });
+/** Update the duration for the history entry matching url + visited_at. */
+export async function updateDuration(
+  url: string,
+  visitedAt: number,
+  durationSeconds: number,
+): Promise<void> {
+  await sendDbRequest('updateDuration', { url, visitedAt, durationSeconds });
+}
+
+/** Delete every local history entry. Returns the number deleted. */
+export async function clearHistory(): Promise<number> {
+  return (await sendDbRequest('clearHistory', {})) as number;
 }
 
 /** Get a device config value by key. */

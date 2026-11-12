@@ -13,6 +13,7 @@ export default defineConfig({
     permissions: [
       'storage',
       'unlimitedStorage',
+      'alarms',
       // offscreen API is Chrome-only; Firefox/Safari don't have or need it
       ...(browser === 'firefox' ? [] : ['offscreen']),
     ],
