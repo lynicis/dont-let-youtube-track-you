@@ -2,7 +2,7 @@
   "name": "dont-let-youtube-track-you",
   "description": "Privately track your YouTube browsing history and sync across devices without Google tracking",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.3.5",
   "type": "module",
   "scripts": {
     "dev": "wxt",

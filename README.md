@@ -95,7 +95,7 @@ This works on [Firefox Developer Edition](https://www.mozilla.org/en-US/firefox/
 
 2. Rename the zip to `.xpi`:
    ```bash
-   mv .output/dont-let-youtube-track-you-1.0.0-firefox.zip .output/dont-let-youtube-track-you.xpi
+   mv .output/dont-let-youtube-track-you-1.3.5-firefox.zip .output/dont-let-youtube-track-you.xpi
    ```
    > If the filename differs, check `.output/` for the actual zip name.
 
